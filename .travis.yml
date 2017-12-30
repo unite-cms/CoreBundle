@@ -1,5 +1,7 @@
 language: php
-sudo: false
+
+# because we need to install mysql 5.7 first
+sudo: required
 dist: trusty
 os: linux
 
@@ -15,7 +17,7 @@ cache:
         - $HOME/.composer/cache/files
 
 services:
-    - mysql
+  - mysql
 
 env:
   global:
@@ -30,6 +32,7 @@ install:
   - composer install
 
 before_script:
+  - bash .travis.install-mysql-5.7.sh
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
   - chmod +x ./cc-test-reporter
   - ./cc-test-reporter before-build
