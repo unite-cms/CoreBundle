@@ -24,14 +24,18 @@ env:
 
 before_install:
   - composer self-update
-  - composer require codeclimate/php-test-reporter --dev
   - mysql -e 'CREATE DATABASE united_core_test;'
 
 install:
   - composer install
 
+before_script:
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
+
 script:
   - phpunit
 
 after_success:
-  - vendor/bin/test-reporter
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
