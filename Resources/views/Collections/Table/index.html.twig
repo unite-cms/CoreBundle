@@ -1,0 +1,12 @@
+<div id="collection">
+    <h1 class="uk-heading-divider">
+        {{ collection.contentType }}
+        {% if collection.identifier != 'all' %} » {{ collection }}{% endif %}
+        {% if parameters.selectModeNone %}
+            <a href="{{ parameters.url('create') }}" class="uk-icon-button uk-button-primary" uk-icon="icon: plus"></a>
+        {% endif %}
+    </h1>
+
+    <united-cms-core-collection-table parameters='{{ parameters|json_encode|raw }}'></united-cms-core-collection-table>
+
+</div>

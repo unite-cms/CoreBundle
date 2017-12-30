@@ -1,0 +1,3 @@
+united_cms_core:
+    resource: "@UnitedCMSCoreBundle/Resources/config/routing.yml"
+    prefix:   /

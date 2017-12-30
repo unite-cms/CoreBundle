@@ -1,0 +1,32 @@
+# Contains all custom validators.
+services:
+
+  # Checks, that a fieldType is available.
+  UnitedCMS\CoreBundle\Validator\Constraints\FieldTypeValidator:
+    tags: [validator.constraint_validator]
+    arguments: ['@united.cms.field_type_manager']
+    public: false
+
+  # Checks, that a collectionType is available.
+  UnitedCMS\CoreBundle\Validator\Constraints\CollectionTypeValidator:
+    tags: [validator.constraint_validator]
+    arguments: ['@united.cms.collection_type_manager']
+    public: false
+
+  # Checks, that the fieldableContent (content or setting) data is valid according to the contentType / settingType definition.
+  UnitedCMS\CoreBundle\Validator\Constraints\ValidFieldableContentDataValidator:
+    tags: [validator.constraint_validator]
+    arguments: ['@united.cms.field_type_manager']
+    public: false
+
+  # Checks, that the field setting data is valid by asking the corresponding fieldType.
+  UnitedCMS\CoreBundle\Validator\Constraints\ValidFieldSettingsValidator:
+    tags: [validator.constraint_validator]
+    arguments: ['@united.cms.field_type_manager']
+    public: false
+
+  # Checks, that the collection setting data is valid by asking the corresponding collectionType.
+  UnitedCMS\CoreBundle\Validator\Constraints\ValidCollectionSettingsValidator:
+    tags: [validator.constraint_validator]
+    arguments: ['@united.cms.collection_type_manager']
+    public: false

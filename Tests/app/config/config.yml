@@ -1,0 +1,111 @@
+imports:
+    - { resource: security.yml }
+    - { resource: services.yml }
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices/configuration.html#application-related-configuration
+parameters:
+    locale: en
+    jms_serializer.unserialize_object_constructor.class: UnitedCMS\CoreBundle\Serializer\ObjectConstructor
+
+    env(MYSQL_HOST): 127.0.0.1
+    env(MYSQL_PORT): null
+    env(MYSQL_NAME): united_core_test
+    env(MYSQL_USER): root
+    env(MYSQL_PASSWORD): null
+    secret: secret
+
+framework:
+    #esi: ~
+    #translator: { fallbacks: ['%locale%'] }
+    secret: '%secret%'
+    router:
+        resource: '%kernel.root_dir%/config/routing.yml'
+        strict_requirements: ~
+    form: ~
+    csrf_protection: ~
+    validation: { enable_annotations: true }
+    #serializer: { enable_annotations: true }
+    templating:
+        engines: ['twig']
+    default_locale: '%locale%'
+    trusted_hosts: ~
+    session:
+        # https://symfony.com/doc/current/reference/configuration/framework.html#handler-id
+        handler_id: session.handler.native_file
+        save_path: '%kernel.root_dir%/var/sessions/%kernel.environment%'
+    fragments: ~
+    http_method_override: true
+    php_errors:
+        log: true
+
+# Twig Configuration
+twig:
+    debug: '%kernel.debug%'
+    strict_variables: '%kernel.debug%'
+    form_themes:
+        - '@UnitedCMSCore/Form/uikit_layout.html.twig'
+    globals:
+        united: '@united.cms.manager'
+
+# Doctrine Configuration
+doctrine:
+    dbal:
+        driver: pdo_mysql
+        host: '%env(MYSQL_HOST)%'
+        port: '%env(MYSQL_PORT)%'
+        dbname: '%env(MYSQL_NAME)%'
+        user: '%env(MYSQL_USER)%'
+        password: '%env(MYSQL_PASSWORD)%'
+        charset: utf8mb4
+        default_table_options:
+            charset: utf8mb4
+            collate: utf8mb4_unicode_ci
+    orm:
+        auto_generate_proxy_classes: '%kernel.debug%'
+        naming_strategy: doctrine.orm.naming_strategy.underscore
+        auto_mapping: true
+        mappings:
+            gedmo_loggable:
+                type: annotation
+                prefix: Gedmo\Loggable\Entity
+                dir: "%kernel.root_dir%/../../vendor/gedmo/doctrine-extensions/lib/Gedmo/Loggable/Entity"
+                alias: GedmoLoggable # (optional) it will default to the name set for the mappingmapping
+                is_bundle: false
+        filters:
+            gedmo_softdeleteable:
+                class: Gedmo\SoftDeleteable\Filter\SoftDeleteableFilter
+                enabled: true
+        dql:
+            string_functions:
+                JSON_EXTRACT: Syslogic\DoctrineJsonFunctions\Query\AST\Functions\Mysql\JsonExtract
+
+swiftmailer:
+    disable_delivery: true
+    transport: smtp
+    host: 0.0.0.0
+    username: null
+    password: null
+    port: 1025
+    spool: { type: memory }
+
+stof_doctrine_extensions:
+    default_locale: en
+    orm:
+        default:
+            softdeleteable: true
+            sortable: true
+            timestampable: true
+            loggable: true
+
+
+knp_paginator:
+    page_range: 5
+    default_options:
+        page_name: page
+        sort_field_name: sort
+        sort_direction_name: direction
+        distinct: false
+    template:
+        pagination: 'UnitedCMSCoreBundle:Pagination:sliding.html.twig'
+        sortable: 'UnitedCMSCoreBundle:Pagination:sortable_link.html.twig'
