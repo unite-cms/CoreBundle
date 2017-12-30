@@ -61,7 +61,6 @@ class Organization
     /**
      * @var User[]
      * @Assert\Valid()
-     *
      * @ORM\OneToMany(targetEntity="UnitedCMS\CoreBundle\Entity\OrganizationMember", mappedBy="organization", cascade={"persist", "remove", "merge"}, fetch="EXTRA_LAZY", orphanRemoval=true)
      */
     private $users;
