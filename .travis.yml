@@ -1,0 +1,30 @@
+language: php
+sudo: false
+
+matrix:
+    include:
+        - php: 7.1
+        - php: 7.2
+
+    fast_finish: true
+
+cache:
+    directories:
+        - $HOME/.composer/cache/files
+
+services:
+    - mysql
+
+env:
+  - MYSQL_NAME=united_core_test
+  - MYSQL_USER=travis
+
+before_install:
+  - composer self-update
+  - mysql -e 'CREATE DATABASE united_core_test;'
+
+install:
+  - composer install
+
+script:
+  - phpunit
