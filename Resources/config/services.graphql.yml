@@ -5,7 +5,6 @@ services:
     united.cms.graphql.schema_type_manager:
         class: UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager
         arguments: ['@united.cms.graphql.content_type_factory', '@united.cms.graphql.content_result_type_factory', '@united.cms.graphql.setting_type_factory', '@united.cms.graphql.content_in_collection_type_factory']
-        public: true
 
     # SchemaTypeFactory implementations
     united.cms.graphql.content_type_factory:
