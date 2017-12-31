@@ -3,8 +3,8 @@
 namespace UnitedCMS\CoreBundle\Controller;
 
 use Doctrine\ORM\EntityManager;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -24,12 +24,7 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}")
      * @Method({"GET"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::LIST'), collection)")
      *
      * @param Collection $collection
@@ -56,12 +51,7 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/create")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::CREATE'), collection)")
      *
      * @param Collection $collection
@@ -151,13 +141,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/update/{content}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
      * @param Collection $collection
@@ -229,13 +214,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/delete/{content}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::DELETE'), content)")
      *
      * @param Collection $collection
@@ -293,13 +273,7 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/delete-definitely/{content}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     *
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
      * @param Collection $collection
      * @param string $content
      * @param Request $request
@@ -394,13 +368,7 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/recover/{content}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     *
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
      * @param Collection $collection
      * @param string $content
      * @param Request $request
@@ -486,13 +454,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/translations/{content}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
      * @param Collection $collection
@@ -533,13 +496,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/translations/{content}/add/{locale}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
      * @param Collection $collection
@@ -643,13 +601,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/translations/{content}/remove/{locale}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
      * @param Collection $collection
@@ -712,13 +665,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/revisions/{content}")
      * @Method({"GET"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
      * @param Collection $collection
@@ -742,13 +690,8 @@ class ContentController extends Controller
     /**
      * @Route("/{content_type}/{collection}/revisions/{content}/revert/{version}")
      * @Method({"GET", "POST"})
-     * @ParamConverter("collection", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "content_type": "contentType",
-     *    "collection": "collection"
-     * }})
-     * @ParamConverter("content")
+     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
      * @param Collection $collection

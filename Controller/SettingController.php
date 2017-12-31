@@ -2,8 +2,8 @@
 
 namespace UnitedCMS\CoreBundle\Controller;
 
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -19,11 +19,7 @@ class SettingController extends Controller
     /**
      * @Route("/{setting_type}/{locale}", defaults={"locale"=null})
      * @Method({"GET", "POST"})
-     * @ParamConverter("settingType", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "setting_type": "settingType"
-     * }})
+     * @Entity("settingType", expr="repository.findByIdentifiers(organization, domain, setting_type)")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\SettingVoter::UPDATE'), settingType)")
      *
      * @param SettingType $settingType
@@ -103,12 +99,8 @@ class SettingController extends Controller
 
     /**
      * @Route("/{setting_type}/translations/{setting}")
-     * @ParamConverter("settingType", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "setting_type": "settingType"
-     * }})
-     * @ParamConverter("setting")
+     * @Entity("settingType", expr="repository.findByIdentifiers(organization, domain, setting_type)")
+     * @Entity("setting")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\SettingVoter::UPDATE'), setting)")
      *
      * @param SettingType $settingType
@@ -129,12 +121,8 @@ class SettingController extends Controller
 
     /**
      * @Route("/{setting_type}/revisions/{setting}")
-     * @ParamConverter("settingType", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "setting_type": "settingType"
-     * }})
-     * @ParamConverter("setting")
+     * @Entity("settingType", expr="repository.findByIdentifiers(organization, domain, setting_type)")
+     * @Entity("setting")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\SettingVoter::UPDATE'), setting)")
      *
      * @param SettingType $settingType
@@ -156,12 +144,8 @@ class SettingController extends Controller
 
     /**
      * @Route("/{setting_type}/revisions/{setting}/revert/{version}")
-     * @ParamConverter("settingType", options={ "repository_method" = "findByIdentifiers", "map_method_signature" = true, "mapping": {
-     *    "organization": "organization",
-     *    "domain": "domain",
-     *    "setting_type": "settingType"
-     * }})
-     * @ParamConverter("setting")
+     * @Entity("settingType", expr="repository.findByIdentifiers(organization, domain, setting_type)")
+     * @Entity("setting")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\SettingVoter::UPDATE'), setting)")
      *
      * @param SettingType $settingType
