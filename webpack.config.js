@@ -9,7 +9,7 @@ Encore
     .setPublicPath('/bundles/unitedcmscore')
 
     // Used as a prefix to the *keys* in manifest.json
-    .setManifestKeyPrefix('bundles/unitedcmscore')
+    .setManifestKeyPrefix('')
 
     .addEntry('main', './Resources/webpack/main.js')
 
