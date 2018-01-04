@@ -284,10 +284,10 @@ class Content implements FieldableContent
     }
 
     /**
-     * @param Content[] $translations
+     * @param ArrayCollection|Content[] $translations
      * @return Content
      */
-    public function setTranslations(array $translations)
+    public function setTranslations($translations)
     {
         $this->translations = $translations;
         return $this;

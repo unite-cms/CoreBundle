@@ -2,6 +2,8 @@
 
 namespace UnitedCMS\CoreBundle\Validator\Constraints;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\InvalidArgumentException;
@@ -11,9 +13,27 @@ class ValidContentTranslationsValidator extends ConstraintValidator
 {
     public function validate($value, Constraint $constraint)
     {
+        if($this->context->getObject() == null) {
+            return;
+        }
+
+        if($value == null) {
+            return;
+        }
+
         if (!$this->context->getObject() instanceof Content) {
             throw new InvalidArgumentException(
-                'The ValidContentLocaleValidator constraint expects a UnitedCMS\CoreBundle\Entity\Content object.'
+                'The ValidContentTranslationsValidator constraint expects a UnitedCMS\CoreBundle\Entity\Content object.'
+            );
+        }
+
+        if(is_array($value)) {
+            $value = new ArrayCollection($value);
+        }
+
+        if (!$value instanceof Collection) {
+            throw new InvalidArgumentException(
+                'The ValidContentTranslationsValidator constraint expects an array or a Doctrine\Common\Collections\Collection value.'
             );
         }
 

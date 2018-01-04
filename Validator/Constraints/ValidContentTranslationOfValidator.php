@@ -11,14 +11,24 @@ class ValidContentTranslationOfValidator extends ConstraintValidator
 {
     public function validate($value, Constraint $constraint)
     {
+        if($value == null) {
+            return;
+        }
+
+        if($this->context->getObject() == null) {
+            return;
+        }
+
         if (!$this->context->getObject() instanceof Content) {
             throw new InvalidArgumentException(
-                'The ValidContentLocaleValidator constraint expects a UnitedCMS\CoreBundle\Entity\Content object.'
+                'The ValidContentTranslationOfValidator constraint expects a UnitedCMS\CoreBundle\Entity\Content object.'
             );
         }
 
-        if($value == null) {
-            return;
+        if (!$value instanceof Content) {
+            throw new InvalidArgumentException(
+                'The ValidContentTranslationOfValidator constraint expects a UnitedCMS\CoreBundle\Entity\Content value.'
+            );
         }
 
         /**
