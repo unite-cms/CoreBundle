@@ -6,6 +6,24 @@ use Doctrine\ORM\Query\Expr\Andx;
 use Doctrine\ORM\Query\Expr\Comparison;
 use Doctrine\ORM\Query\Expr\Orx;
 
+/**
+ * Builds an doctrine query expression by evaluating a nested filter array:
+ *
+ * Examples:
+ *
+ * $filterInput = [ 'field' => 'id', 'operator' => '=', 'value' => 123 ];
+ * $filterInput = [ 'AND' => [
+ *   [ 'field' => 'id', 'operator' => '=', 'value' => 123 ],
+ *   [ 'field' => 'id', 'operator' => '>', 'value' => 200 ]
+ * ];
+ * $filterInput = [ 'AND' => [
+ *   'OR' => [
+ *      ['field' => 'title', 'operator' => 'LIKE', 'value' => '%foo%'],
+ *      ['field' => 'title', 'operator' => 'LIKE', 'value' => '%baa%'],
+ *   ],
+ *   [ 'field' => 'id', 'operator' => '=', 'value' => 123 ],
+ * ]
+ */
 class GraphQLDoctrineFilterQueryBuilder
 {
     private $contentEntityFields;
@@ -15,6 +33,12 @@ class GraphQLDoctrineFilterQueryBuilder
     private $parameters = [];
     private $parameterCount = 0;
 
+    /**
+     * GraphQLDoctrineFilterQueryBuilder constructor.
+     * @param array $filterInput
+     * @param array $contentEntityFields
+     * @param string $contentEntityPrefix
+     */
     public function __construct(array $filterInput, $contentEntityFields = [], $contentEntityPrefix)
     {
         $this->contentEntityFields = $contentEntityFields;
@@ -22,14 +46,30 @@ class GraphQLDoctrineFilterQueryBuilder
         $this->filter = $this->getQueryBuilderComposite($filterInput);
     }
 
+    /**
+     * Returns the doctrine filter object.
+     *
+     * @return Comparison|Orx|null
+     */
     public function getFilter() {
         return $this->filter;
     }
 
+    /**
+     * Returns all parameters, that where used in any filter.
+     *
+     * @return string[]
+     */
     public function getParameters() {
         return $this->parameters;
     }
 
+    /**
+     * Build the nested doctrine filter object.
+     *
+     * @param array $filterInput
+     * @return Andx|Comparison|Orx
+     */
     private function getQueryBuilderComposite(array $filterInput) {
 
         // filterInput can contain AND, OR or a direct expression
@@ -69,7 +109,7 @@ class GraphQLDoctrineFilterQueryBuilder
             return new Comparison($leftSide, $filterInput['operator'], ':' . $parameter_name);
         }
 
-
+        return null;
     }
 
 }

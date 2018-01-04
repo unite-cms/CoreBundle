@@ -97,5 +97,9 @@ class ValidContentTranslationsValidatorTest extends ConstraintValidatorTestCase
         $translations->get(1)->setLocale('fr')->setTranslationof($object);
         $errors = $this->validate($translations, new ValidContentTranslationsValidator(), null, $object);
         $this->assertCount(0, $errors->getViolations());
+
+        // Also setting an array for translations should be valid.
+        $errors = $this->validate($translations->toArray(), new ValidContentTranslationsValidator(), null, $object);
+        $this->assertCount(0, $errors->getViolations());
     }
 }
