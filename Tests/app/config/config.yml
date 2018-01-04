@@ -39,6 +39,12 @@ framework:
     php_errors:
         log: true
 
+    assets:
+        packages:
+            UnitedCMSCoreBundle:
+                json_manifest_path: "%kernel.project_dir%/Resources/public/manifest.json"
+                base_path: '/bundles/unitedcmscore'
+
 # Twig Configuration
 twig:
     debug: '%kernel.debug%'
