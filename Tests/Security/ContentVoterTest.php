@@ -2,9 +2,9 @@
 
 namespace src\UnitedCMS\CoreBundle\Tests\Security;
 
+use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
 use UnitedCMS\CoreBundle\Entity\Content;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
@@ -13,6 +13,7 @@ use UnitedCMS\CoreBundle\Entity\Organization;
 use UnitedCMS\CoreBundle\Entity\OrganizationMember;
 use UnitedCMS\CoreBundle\Entity\User;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
+use UnitedCMS\CoreBundle\Security\DeletedContentVoter;
 use UnitedCMS\CoreBundle\Tests\SecurityVoterTestCase;
 
 class ContentVoterTest extends SecurityVoterTestCase
@@ -95,11 +96,16 @@ class ContentVoterTest extends SecurityVoterTestCase
         $this->u['domain_editor'] = new UsernamePasswordToken($user, 'password', 'main', $user->getRoles());
     }
 
-    public function testFallbackForNotSupportedArguments() {
+    public function testFallbackForNotSupportedArguments()
+    {
         $voter = new ContentVoter();
 
-        $invalidUser = new class {
-            public function __toString() { return 'any'; }
+        $invalidUser = new class
+        {
+            public function __toString()
+            {
+                return 'any';
+            }
         };
 
         // Try with invalid token.
@@ -175,6 +181,74 @@ class ContentVoterTest extends SecurityVoterTestCase
         $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
         $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
         $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content2));
+        $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
+        $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
+
+        // Anonymous user have only access to content if it is granted
+        $this->container->get('security.token_storage')->setToken($this->u['anonymous']);
+        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
+        $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
+        $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
+    }
+
+    public function testCRUDActionsForDeletedContent()
+    {
+
+        $dm = $this->container->get('security.authorization_checker');
+
+        $reflector = new \ReflectionProperty(Content::class, 'deleted');
+        $reflector->setAccessible(true);
+        $reflector->setValue($this->content1, new \DateTime());
+        $reflector->setValue($this->content2, new \DateTime());
+
+        // Platform admins can preform all content actions.
+        $this->container->get('security.token_storage')->setToken($this->u['platform']);
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content1));
+        $this->assertTrue($dm->isGranted([ContentVoter::UPDATE], $this->content1));
+        $this->assertTrue($dm->isGranted([ContentVoter::DELETE], $this->content1));
+
+        // Organization admins can preform all content actions on their organization domain's content.
+        $this->container->get('security.token_storage')->setToken($this->u['admin']);
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content2));
+        $this->assertTrue($dm->isGranted([ContentVoter::UPDATE], $this->content2));
+        $this->assertTrue($dm->isGranted([ContentVoter::DELETE], $this->content2));
+
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content1));
+        $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content1));
+        $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content1));
+
+        // All other users can preform the actions they have access to.
+        $this->container->get('security.token_storage')->setToken($this->u['domain_admin']);
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content1));
+        $this->assertTrue($dm->isGranted([ContentVoter::UPDATE], $this->content1));
+        $this->assertTrue($dm->isGranted([ContentVoter::DELETE], $this->content1));
+
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
+        $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
+        $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
+
+        $this->container->get('security.token_storage')->setToken($this->u['domain_editor']);
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content1));
+        $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content1));
+        $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content1));
+
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
 

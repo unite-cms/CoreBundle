@@ -44,6 +44,7 @@ class ValidFieldableContentLocaleValidator extends ConstraintValidator
             return;
         }
 
+        // If it is empty, we we cannot validate it.
         if($value == null) {
             return;
         }

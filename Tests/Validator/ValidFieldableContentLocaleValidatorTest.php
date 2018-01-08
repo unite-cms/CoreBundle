@@ -85,6 +85,21 @@ class ValidFieldableContentLocaleValidatorTest extends ConstraintValidatorTestCa
         $this->assertEquals('This locale is not supported by this content type', $errors->getViolations()->get(0)->getMessageTemplate());
     }
 
+    public function testEmptyLocale() {
+        $entity = $this->createMock(Fieldable::class);
+        $entity->expects($this->any())
+            ->method('getLocales')
+            ->willReturn(['de']);
+
+        $object = $this->createMock(FieldableContent::class);
+        $object->expects($this->any())
+            ->method('getEntity')
+            ->willReturn($entity);
+
+        $errors = $this->validate(null, new ValidFieldableContentLocaleValidator(), null, $object);
+        $this->assertCount(0, $errors->getViolations());
+    }
+
     public function testInvalidLocale() {
         $entity = $this->createMock(Fieldable::class);
         $entity->expects($this->any())
