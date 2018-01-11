@@ -31,6 +31,14 @@ class SchemaTypeManager
         return $this->schemaTypes;
     }
 
+    /**
+     * @return SchemaTypeFactoryInterface[]
+     */
+    public function getSchemaTypeFactories(): array
+    {
+        return $this->schemaTypeFactories;
+    }
+
     public function hasSchemaType($key): bool
     {
         return array_key_exists($key, $this->schemaTypes);
@@ -73,7 +81,7 @@ class SchemaTypeManager
     {
         if (!$schemaType instanceof InputObjectType && !$schemaType instanceof ObjectType && !$schemaType instanceof InterfaceType && !$schemaType instanceof UnionType && !$schemaType instanceof ListOfType) {
             throw new \InvalidArgumentException(
-                'Schema type must be of type'.ObjectType::class.' or '.InputObjectType::class
+                'Schema type must be of type ' . ObjectType::class . ' or ' . InputObjectType::class . ' or ' . InterfaceType::class . ' or ' . UnionType::class . ' or ' . ListOfType::class
             );
         }
 

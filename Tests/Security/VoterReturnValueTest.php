@@ -71,6 +71,20 @@ class VoterReturnValueTest extends SecurityVoterTestCase
         $this->assertEquals(VoterInterface::ACCESS_ABSTAIN, $settingVoter->voteWithoutCheck($this->token, (object)[], ''));
     }
 
+    public function testContentVoterReturnsAbstainForDeletedContent() {
+
+        $contentVoter = new class extends ContentVoter {
+            public function voteWithoutCheck(TokenInterface $token, $subject, $attribute) {
+                return $this->voteOnAttribute($attribute, $subject, $token);
+            }
+        };
+        $value = new Content();
+        $reflector = new \ReflectionProperty(Content::class, 'deleted');
+        $reflector->setAccessible(true);
+        $reflector->setValue($value, new \DateTime());
+        $this->assertEquals(VoterInterface::ACCESS_ABSTAIN, $contentVoter->voteWithoutCheck($this->token, $value, 'any'));
+    }
+
     /**
      * @expectedException \InvalidArgumentException
      * @expectedExceptionMessage Permission 'unsupported' was not found in ContentType 'any'

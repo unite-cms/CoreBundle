@@ -23,5 +23,5 @@ interface SchemaTypeFactoryInterface {
      * @param string $schemaTypeName
      * @return Type
      */
-    public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain, string $schemaTypeName) : Type;
+    public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain = null, string $schemaTypeName) : Type;
 }

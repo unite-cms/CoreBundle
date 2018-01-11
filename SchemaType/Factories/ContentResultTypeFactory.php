@@ -49,8 +49,12 @@ class ContentResultTypeFactory implements SchemaTypeFactoryInterface
      * @param string $schemaTypeName
      * @return Type
      */
-    public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain, string $schemaTypeName): Type
+    public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain = null, string $schemaTypeName): Type
     {
+        if(!$domain) {
+            throw new \InvalidArgumentException('UnitedCMS\CoreBundle\SchemaType\Factories\ContentResultTypeFactory::createSchemaType needs an domain as second argument');
+        }
+
         $nameParts = preg_split('/(?=[A-Z])/', $schemaTypeName, -1, PREG_SPLIT_NO_EMPTY);
         $identifier = strtolower($nameParts[0]);
 
