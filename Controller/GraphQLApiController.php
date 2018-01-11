@@ -3,6 +3,7 @@
 namespace UnitedCMS\CoreBundle\Controller;
 
 use GraphQL\Server\Helper;
+use GraphQL\Server\RequestError;
 use GraphQL\Server\ServerConfig;
 use GraphQL\Server\StandardServer;
 use GraphQL\Type\Schema;
@@ -42,13 +43,19 @@ class GraphQLApiController extends Controller
             ServerConfig::create()->setSchema($schema)->setQueryBatching(true)->setDebug(true)
         );
         $serverHelper = new Helper();
-        $result = $server->executeRequest(
-            $serverHelper->parseRequestParams(
-                $request->getMethod(),
-                json_decode($request->getContent(), true),
-                $request->request->all()
-            )
-        );
+
+        try {
+            $result = $server->executeRequest(
+                $serverHelper->parseRequestParams(
+                    $request->getMethod(),
+                    json_decode($request->getContent(), true),
+                    $request->request->all()
+                )
+            );
+        } catch (RequestError $e) {
+            $this->get('logger')->critical($e->getMessage(), ['exception' => $e]);
+            return new JsonResponse([], 500);
+        }
 
         return new JsonResponse($result);
     }

@@ -128,7 +128,7 @@ class ReferenceFieldType extends FieldType
     function getGraphQLType(SchemaTypeManager $schemaTypeManager)
     {
         // We use the default content in collection factory to build the type
-        return $schemaTypeManager->getSchemaType(ucfirst($this->field->getSettings()->content_type . 'Content'));
+        return $schemaTypeManager->getSchemaType(ucfirst($this->field->getSettings()->content_type . 'Content'), $this->unitedCMSManager->getDomain());
     }
 
     function resolveGraphQLData($value)
