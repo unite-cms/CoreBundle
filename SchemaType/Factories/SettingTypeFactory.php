@@ -42,6 +42,11 @@ class SettingTypeFactory implements SchemaTypeFactoryInterface
     {
         $nameParts = preg_split('/(?=[A-Z])/', $schemaTypeName, -1, PREG_SPLIT_NO_EMPTY);
 
+        // If this has an Level Suffix, we need to remove it first.
+        if(substr($nameParts[count($nameParts) - 1], 0, strlen('Level')) == 'Level') {
+            array_pop($nameParts);
+        }
+
         if(count($nameParts) !== 2) {
             return false;
         }
@@ -56,11 +61,12 @@ class SettingTypeFactory implements SchemaTypeFactoryInterface
     /**
      * Returns the new created schema type object for the given name.
      * @param SchemaTypeManager $schemaTypeManager
+     * @param int $nestingLevel
      * @param Domain $domain
      * @param string $schemaTypeName
      * @return Type
      */
-    public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain = null, string $schemaTypeName): Type
+    public function createSchemaType(SchemaTypeManager $schemaTypeManager, int $nestingLevel, Domain $domain = null, string $schemaTypeName): Type
     {
         if(!$domain) {
             throw new \InvalidArgumentException('UnitedCMS\CoreBundle\SchemaType\Factories\SettingTypeFactory::createSchemaType needs an domain as second argument');
@@ -101,13 +107,13 @@ class SettingTypeFactory implements SchemaTypeFactoryInterface
         foreach ($settingType->getFields() as $field) {
             $fieldTypes[$field->getIdentifier()] = $this->fieldTypeManager->getFieldType($field->getType());
             $fieldTypes[$field->getIdentifier()]->setEntityField($field);
-            $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($schemaTypeManager);
+            $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($schemaTypeManager, $nestingLevel + 1);
             $fieldTypes[$field->getIdentifier()]->unsetEntityField();
         }
 
         return new ObjectType(
             [
-                'name' => ucfirst($identifier).'Setting',
+                'name' => ucfirst($identifier).'Setting'  . ($nestingLevel > 0 ? 'Level' . $nestingLevel : ''),
                 'fields' => array_merge(
                     [
                         'type' => Type::string(),

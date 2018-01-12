@@ -13,6 +13,8 @@ use UnitedCMS\CoreBundle\SchemaType\Factories\SchemaTypeFactoryInterface;
 
 class SchemaTypeManager
 {
+    const MAXIMUM_NESTING_LEVEL = 5;
+
     /**
      * @var ObjectType|InputObjectType|InterfaceType|UnionType[]
      */
@@ -51,15 +53,24 @@ class SchemaTypeManager
      *
      * @param $key
      * @param Domain $domain
+     * @param int $nestingLevel
      *
      * @return ObjectType|InputObjectType|InterfaceType|UnionType
      */
-    public function getSchemaType($key, Domain $domain = null)
+    public function getSchemaType($key, Domain $domain = null, $nestingLevel = 0)
     {
+        if($nestingLevel > self::MAXIMUM_NESTING_LEVEL) {
+            throw new \InvalidArgumentException("Maximum nesting level: " . self::MAXIMUM_NESTING_LEVEL . " reached.");
+        }
+
+        if($nestingLevel == self::MAXIMUM_NESTING_LEVEL) {
+            $key = 'MaximumNestingLevel';
+        }
+
         if (!$this->hasSchemaType($key)) {
             foreach($this->schemaTypeFactories as $schemaTypeFactory) {
                 if($schemaTypeFactory->supports($key)) {
-                    $this->registerSchemaType($schemaTypeFactory->createSchemaType($this, $domain, $key));
+                    $this->registerSchemaType($schemaTypeFactory->createSchemaType($this, $nestingLevel, $domain, $key));
                     break;
                 }
             }

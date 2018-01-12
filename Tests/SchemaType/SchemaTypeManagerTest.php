@@ -38,7 +38,7 @@ class SchemaTypeManagerTest extends ContainerAwareTestCase {
         };
         $schemaTypeFactory = new class implements SchemaTypeFactoryInterface {
             public function supports(string $schemaTypeName): bool { return false; }
-            public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain = null, string $schemaTypeName): Type
+            public function createSchemaType(SchemaTypeManager $schemaTypeManager, int $nestingLevel, Domain $domain = null, string $schemaTypeName): Type
             {
                 return new ObjectType([]);
             }
@@ -90,7 +90,7 @@ class SchemaTypeManagerTest extends ContainerAwareTestCase {
         };
         $schemaTypeFactory = new class implements SchemaTypeFactoryInterface {
             public function supports(string $schemaTypeName): bool { return $schemaTypeName === 'factory_type'; }
-            public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain = null, string $schemaTypeName): Type
+            public function createSchemaType(SchemaTypeManager $schemaTypeManager, int $nestingLevel, Domain $domain = null, string $schemaTypeName): Type
             {
                 return new ObjectType(['name' => 'factory_type']);
             }

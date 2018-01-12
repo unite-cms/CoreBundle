@@ -60,11 +60,12 @@ class ContentInCollectionTypeFactory implements SchemaTypeFactoryInterface
     /**
      * Returns the new created schema type object for the given name.
      * @param SchemaTypeManager $schemaTypeManager
+     * @param int $nestingLevel
      * @param Domain $domain
      * @param string $schemaTypeName
      * @return Type
      */
-    public function createSchemaType(SchemaTypeManager $schemaTypeManager, Domain $domain = null, string $schemaTypeName): Type
+    public function createSchemaType(SchemaTypeManager $schemaTypeManager, int $nestingLevel, Domain $domain = null, string $schemaTypeName): Type
     {
         if(!$domain) {
             throw new \InvalidArgumentException('UnitedCMS\CoreBundle\SchemaType\Factories\ContentInCollectionTypeFactory::createSchemaType needs an domain as second argument');

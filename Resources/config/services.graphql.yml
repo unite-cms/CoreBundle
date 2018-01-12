@@ -54,6 +54,8 @@ services:
         tags: [united_cms.graphql.schema_type]
         arguments: ['@united.cms.graphql.schema_type_manager', '@united.cms.manager']
 
+    UnitedCMS\CoreBundle\SchemaType\Types\MaximumNestingLevelType:
+        tags: [united_cms.graphql.schema_type]
 
     # Input Type implementations, that get registered in the schema_type_manager.
     UnitedCMS\CoreBundle\SchemaType\Types\Input\ContentTypeCollectionInputType:

@@ -14,9 +14,10 @@ interface FieldTypeInterface
 
     /**
      * @param SchemaTypeManager $schemaTypeManager
+     * @param int $nestingLevel
      * @return Type
      */
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager);
+    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0);
 
     function getFormType(): string;
 

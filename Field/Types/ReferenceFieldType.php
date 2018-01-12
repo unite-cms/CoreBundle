@@ -3,6 +3,7 @@
 namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Doctrine\ORM\EntityManager;
+use GraphQL\Type\Definition\Type;
 use Symfony\Bridge\Twig\TwigEngine;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\InvalidArgumentException;
@@ -125,10 +126,15 @@ class ReferenceFieldType extends FieldType
         };
     }
 
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager)
+    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
     {
-        // We use the default content in collection factory to build the type
-        return $schemaTypeManager->getSchemaType(ucfirst($this->field->getSettings()->content_type . 'Content'), $this->unitedCMSManager->getDomain());
+        $name = ucfirst($this->field->getSettings()->content_type . 'Content');
+        if($nestingLevel > 0) {
+            $name .= 'Level' . $nestingLevel;
+        }
+
+        // We use the default content in collection factory to build the type.
+        return $schemaTypeManager->getSchemaType($name, $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 
     function resolveGraphQLData($value)
