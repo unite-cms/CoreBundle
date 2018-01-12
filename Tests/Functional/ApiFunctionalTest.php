@@ -13,11 +13,17 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\User\UserInterface;
 use UnitedCMS\CoreBundle\Controller\GraphQLApiController;
 use UnitedCMS\CoreBundle\Entity\ApiClient;
+use UnitedCMS\CoreBundle\Entity\Collection;
+use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
 use UnitedCMS\CoreBundle\Tests\DatabaseAwareTestCase;
 
+/**
+ * @group slow
+ */
 class ApiFunctionalTestCase extends DatabaseAwareTestCase
 {
 
@@ -147,6 +153,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
       ],
       "permissions": {
         "view setting": [
+          "ROLE_PUBLIC",
           "ROLE_EDITOR"
         ],
         "update setting": [
@@ -256,7 +263,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         'baa_organization' => [
             '{
   "title": "Marketing & PR",
-  "identifier": "marketing",
+  "identifier": "internal",
   "roles": [
     "ROLE_PUBLIC",
     "ROLE_EDITOR"
@@ -378,6 +385,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
       ],
       "permissions": {
         "view setting": [
+          "ROLE_PUBLIC",
           "ROLE_EDITOR"
         ],
         "update setting": [
@@ -486,7 +494,15 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         ],
     ];
     protected $roles = ['ROLE_PUBLIC', 'ROLE_EDITOR'];
+
+    /**
+     * @var Domain[] $domains
+     */
     protected $domains = [];
+
+    /**
+     * @var ApiClient[] $users
+     */
     protected $users = [];
 
     /**
@@ -513,13 +529,53 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
                 $this->em->flush($domain);
 
                 foreach($this->roles as $role) {
-                    $this->users[$role] = new ApiClient();
-                    $this->users[$role]->setName(ucfirst($role))->setRoles([$role]);
-                    $this->users[$role]->setDomain($domain);
+                    $this->users[$domain->getIdentifier() . '_' . $role] = new ApiClient();
+                    $this->users[$domain->getIdentifier() . '_' . $role]->setName(ucfirst($role))->setRoles([$role]);
+                    $this->users[$domain->getIdentifier() . '_' . $role]->setDomain($domain);
 
-                    $this->em->persist($this->users[$role]);
-                    $this->em->flush($this->users[$role]);
+                    $this->em->persist($this->users[$domain->getIdentifier() . '_' . $role]);
+                    $this->em->flush($this->users[$domain->getIdentifier() . '_' . $role]);
                 }
+
+                // For each content type create some collections and test content.
+                foreach($domain->getContentTypes() as $ct) {
+
+                    $other = new Collection();
+                    $other->setTitle('Other')->setIdentifier('other')->setType('table');
+                    $ct->addCollection($other);
+                    $this->em->persist($other);
+                    $this->em->flush($other);
+
+                    for($i = 0; $i < 60; $i++) {
+                        $content = new Content();
+                        $content->setContentType($ct);
+
+                        if($i > 50) {
+                            $cIc = new ContentInCollection();
+                            $cIc->setCollection($other);
+                            $content->addCollection($cIc);
+                        }
+
+                        $content_data = [];
+
+                        foreach($ct->getFields() as $field) {
+                            switch ($field->getType()) {
+                                case 'text': $content_data[$field->getIdentifier()] = $this->generateRandomMachineName(100); break;
+                                case 'textarea': $content_data[$field->getIdentifier()] = '<p>' . $this->generateRandomMachineName(100) . '</p>'; break;
+                            }
+                        }
+
+                        $content->setData($content_data);
+                        $this->em->persist($content);
+                        $this->em->flush($content);
+                    }
+
+                    $this->em->refresh($ct);
+                    $this->em->refresh($ct->getCollection('all'));
+                    $this->em->refresh($ct->getCollection('other'));
+                }
+
+                $this->em->refresh($domain);
             }
         }
 
@@ -563,19 +619,460 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         $this->assertApiResponse([
             'data' => [
                 'findNews' => [
-                    'total' => 0
+                    'page' => 1
                 ]
             ]
         ], $this->api(
             $this->domains['marketing'],
-            $this->users['ROLE_PUBLIC'],'query {
+            $this->users['marketing_ROLE_PUBLIC'],'query {
                 findNews {
-                    total
+                    page
+                }
+            }')
+        );
+
+        $this->assertApiResponse([
+            'data' => [
+                'findNews' => [
+                    'page' => 1
+                ],
+                'findNews_category' => [
+                    'page' => 1
+                ]
+            ]
+        ], $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query {
+                findNews {
+                    page
+                },
+                findNews_category {
+                    page
                 }
             }')
         );
     }
 
-    // TODO: More advanced API tests for child fields, filter, sort etc.
+    public function testAPIFiltering() {
 
+        // First get all news
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query {
+                findNews(limit: 100) {
+                    total,
+                    result {
+                        id,
+                        title,
+                        content
+                    }
+                }
+            }');
+
+        // Get title and content partial strings from any random content.
+        $content1 = $news->data->findNews->result[rand(0, $news->data->findNews->total - 1)];
+        $content2 = $news->data->findNews->result[rand(0, $news->data->findNews->total - 1)];
+        $content1_title_part = substr($content1->title, rand(0, 50), rand(0, 20));
+        $content2_content_part = substr($content2->content, rand(0, 50), rand(0, 20));
+
+        // Filter by exact title.
+        $result = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query($value: String) {
+                findNews(filter: { field: "title", operator: "=", value: $value }) {
+                    total,
+                    result {
+                        id,
+                        title,
+                        content
+                    }
+                }
+            }', [
+                'value' => $content1->title
+            ]
+        );
+
+        $this->assertGreaterThan(0, $result->data->findNews->total);
+        $ids = [];
+        foreach($result->data->findNews->result as $c) {
+            $ids[] = $c->id;
+        }
+        $this->assertContains($content1->id, $ids);
+
+
+        // Filter by exact title and exact content.
+        $result = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query($title: String, $content: String) {
+                findNews(filter: { AND: [
+                    { field: "title", operator: "=", value: $title },
+                    { field: "content", operator: "=", value: $content }
+                ]}) {
+                    total,
+                    result {
+                        id,
+                        title,
+                        content
+                    }
+                }
+            }', [
+                'title' => $content1->title,
+                'content' => $content1->content,
+            ]
+        );
+
+        $this->assertGreaterThan(0, $result->data->findNews->total);
+        $ids = [];
+        foreach($result->data->findNews->result as $c) {
+            $ids[] = $c->id;
+        }
+        $this->assertContains($content1->id, $ids);
+
+
+        // Filter by part title or part content.
+        $result = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query($title: String, $content: String) {
+                findNews(filter: { OR: [
+                    { field: "title", operator: "LIKE", value: $title },
+                    { field: "content", operator: "LIKE", value: $content }
+                ]}) {
+                    total,
+                    result {
+                        id,
+                        title,
+                        content
+                    }
+                }
+            }', [
+                'title' => '%' . $content1_title_part . '%',
+                'content' => '%' . $content2_content_part . '%',
+            ]
+        );
+
+        $this->assertContains($content1_title_part, $content1->title);
+        $this->assertContains($content2_content_part, $content2->content);
+
+        $this->assertGreaterThan(1, $result->data->findNews->total);
+        $ids = [];
+        foreach($result->data->findNews->result as $c) {
+            $ids[] = $c->id;
+        }
+        $this->assertContains($content1->id, $ids);
+        $this->assertContains($content2->id, $ids);
+
+
+    }
+
+    public function testAPISorting()
+    {
+        // Make two content have distinct created values
+        $i = 1;
+        $reflector = new \ReflectionProperty(Content::class, 'created');
+        $reflector->setAccessible(true);
+        foreach($this->domains['marketing']->getContentTypes()->first()->getCollection('all')->getContent() as $c) {
+            $time = new \DateTime();
+            $time->add(new \DateInterval('PT'.$i.'S'));
+            $reflector->setValue($c->getContent(), $time);
+
+            if($i == 1) {
+                $c->getContent()->setData([
+                    'title' => 'test_nested_sorting',
+                    'content' => 'AAA',
+                ]);
+            }
+
+            if($i == 2) {
+                $c->getContent()->setData([
+                    'title' => 'test_nested_sorting',
+                    'content' => 'ZZZ',
+                ]);
+            }
+
+            $i++;
+        }
+
+        $this->em->flush();
+        $this->em->refresh($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
+        $this->em->refresh($this->domains['marketing']->getContentTypes()->first());
+        $this->em->refresh($this->domains['marketing']);
+
+
+        // First get all news
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 2, sort: { field: "created", order: "ASC" }) {
+                    total,
+                    result {
+                        created
+                    }
+                }
+            }');
+
+        $this->assertGreaterThan(0, $news->data->findNews->total);
+        $this->assertTrue(($news->data->findNews->result[0]->created < $news->data->findNews->result[1]->created));
+
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 2, sort: { field: "created", order: "DESC" }) {
+                    total,
+                    result {
+                        created
+                    }
+                }
+            }');
+
+        $this->assertGreaterThan(0, $news->data->findNews->total);
+        $this->assertTrue(($news->data->findNews->result[0]->created > $news->data->findNews->result[1]->created));
+
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 2, 
+                    filter: { field: "title", operator: "=", value: "test_nested_sorting" }, 
+                    sort: { field: "content", order: "ASC" }) {
+                    
+                    total,
+                    result {
+                        content
+                    }
+                }
+            }');
+
+        $this->assertEquals(2, $news->data->findNews->total);
+        $this->assertEquals('AAA', $news->data->findNews->result[0]->content);
+        $this->assertEquals('ZZZ', $news->data->findNews->result[1]->content);
+
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 2, 
+                    filter: { field: "title", operator: "=", value: "test_nested_sorting" }, 
+                    sort: { field: "content", order: "DESC" }) {
+                    
+                    total,
+                    result {
+                        content
+                    }
+                }
+            }');
+
+        $this->assertEquals(2, $news->data->findNews->total);
+        $this->assertEquals('ZZZ', $news->data->findNews->result[0]->content);
+        $this->assertEquals('AAA', $news->data->findNews->result[1]->content);
+
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 2, 
+                    filter: { field: "title", operator: "=", value: "test_nested_sorting" }, 
+                    sort: [
+                        { field: "title", order: "ASC" },
+                        { field: "content", order: "ASC" }
+                    ]) {
+                    
+                    total,
+                    result {
+                        content
+                    }
+                }
+            }');
+
+        $this->assertEquals(2, $news->data->findNews->total);
+        $this->assertEquals('AAA', $news->data->findNews->result[0]->content);
+        $this->assertEquals('ZZZ', $news->data->findNews->result[1]->content);
+
+        $news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 2, 
+                    filter: { field: "title", operator: "=", value: "test_nested_sorting" }, 
+                    sort: [
+                        { field: "title", order: "ASC" },
+                        { field: "content", order: "DESC" }
+                    ]) {
+                    
+                    total,
+                    result {
+                        content
+                    }
+                }
+            }');
+
+        $this->assertEquals(2, $news->data->findNews->total);
+        $this->assertEquals('ZZZ', $news->data->findNews->result[0]->content);
+        $this->assertEquals('AAA', $news->data->findNews->result[1]->content);
+    }
+
+    public function testAccessReferencedValue() {
+
+        $category = $this->domains['marketing']->getContentTypes()->last()->getCollection('all')->getContent()->get(0)->getContent();
+        $news = $this->domains['marketing']->getContentTypes()->first()->getCollection('all')->getContent()->get(0)->getContent();
+
+        $news->setData([
+            'title' => 'with_category',
+            'category' => [
+                'domain' => 'marketing',
+                'content_type' => 'news_category',
+                'content' => $category->getId(),
+            ],
+        ]);
+
+        $this->em->flush();
+        $this->em->refresh($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
+        $this->em->refresh($this->domains['marketing']->getContentTypes()->first());
+        $this->em->refresh($this->domains['marketing']);
+
+        $this->assertApiResponse([
+            'data' => [
+                'findNews' => [
+                    'total' => 1,
+                    'result' => [
+                        [
+                            'id' => $news->getId(),
+                            'category' => [
+                                'id' => $category->getId(),
+                                'name' => $category->getData()['name'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ], $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 1, filter: { field: "title", operator: "=", value: "with_category" }) {
+                    total,
+                    result {
+                        id,
+                        category {
+                            id,
+                            name
+                        }
+                    }
+                }
+            }'));
+    }
+
+    public function testGetContentAndSetting() {
+
+        $setting = $this->domains['marketing']->getSettingTypes()->first()->getSetting();
+        $setting->setData([
+            'title' => $this->generateRandomMachineName(100),
+            'imprint' => $this->generateRandomMachineName(100)
+        ]);
+
+        $this->em->persist($setting);
+        $this->em->flush();
+        $this->em->refresh($this->domains['marketing']->getSettingTypes()->first());
+        $this->em->refresh($this->domains['marketing']);
+        $content = $this->domains['marketing']->getContentTypes()->first()->getCollection('all')->getContent()->get(0)->getContent();
+
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query($newsID: ID!) {
+                getNews(id: $newsID) {
+                    id,
+                    title,
+                    content
+                },
+                WebsiteSetting {
+                    title,
+                    imprint
+                }
+            }', [
+            'newsID' => $content->getId(),
+        ]);
+
+        $this->assertApiResponse([
+            'data' => [
+                'getNews' => [
+                    'id' => $content->getId(),
+                    'title' => $content->getData()['title'],
+                    'content' => $content->getData()['content']
+                ],
+                'WebsiteSetting' => [
+                    'title' => $setting->getData()['title'],
+                    'imprint' => $setting->getData()['imprint']
+                ],
+            ],
+        ], $response);
+    }
+
+    public function testContentPagination() {
+
+        // Get all News ids.
+        $ids = [];
+        $all_news = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 100) {
+                    total,
+                    result {
+                        id
+                    }
+                }
+            }');
+
+        foreach($all_news->data->findNews->result as $content) {
+            $ids[] = $content->id;
+        }
+
+        // Test pagination with limit 0 and page 0.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(limit: 0, page: 1) { total, result { id } }
+            }');
+        $this->assertNull($response->data->findNews);
+        $this->assertGreaterThan(0, count($response->errors));
+
+        // Test pagination with too big offset.
+        $this->assertApiResponse([
+            'data' => [ 'findNews' => [ 'total' => 60, 'result' => [] ] ]
+        ], $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'query {
+                findNews(page: 1000) { total, result { id } }
+            }'));
+
+        // Test pagination with negative page should be the same as with page 1.
+        $this->assertEquals(
+
+            $this->api(
+                $this->domains['marketing'],
+                $this->users['marketing_ROLE_PUBLIC'], 'query {
+                    findNews(page: 1) { total, result { id } }
+                }'),
+            $this->api(
+                $this->domains['marketing'],
+                $this->users['marketing_ROLE_PUBLIC'], 'query {
+                    findNews(page: -5) { total, result { id } }
+                }')
+        );
+
+
+
+        // Test pagination with random limit of 1 .. 1/4 of total.
+        $page_size = rand(10, 15);
+        $page = 1;
+        while ($page * $page_size < $all_news->data->findNews->total) {
+            $page_ids = [];
+            $response = $this->api(
+                $this->domains['marketing'],
+                $this->users['marketing_ROLE_PUBLIC'], 'query($page: Int, $limit: Int) {
+                    findNews(page: $page, limit: $limit) { total, result { id } }
+                }', ['page' => $page, 'limit' => $page_size]);
+
+            foreach($response->data->findNews->result as $content) {
+                $page_ids[] = $content->id;
+            }
+
+            $this->assertEquals(array_slice($ids, ($page - 1) * $page_size, $page_size), $page_ids);
+            $page++;
+        }
+
+    }
 }
