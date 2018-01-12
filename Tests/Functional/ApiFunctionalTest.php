@@ -550,7 +550,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
                         $content = new Content();
                         $content->setContentType($ct);
 
-                        if($i > 50) {
+                        if($i >= 50) {
                             $cIc = new ContentInCollection();
                             $cIc->setCollection($other);
                             $content->addCollection($cIc);
@@ -651,6 +651,98 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
                 }
             }')
         );
+
+        // Test accessing content from collection
+        $result = $this->api(
+        $this->domains['marketing'],
+        $this->users['marketing_ROLE_PUBLIC'],'query {
+            findNews(collection: "other") {
+                total,
+                result {
+                    collections {
+                        identifier
+                    }
+                }   
+            }
+        }');
+
+        $this->assertEquals(10, $result->data->findNews->total);
+        foreach($result->data->findNews->result as $content) {
+            $this->assertEquals([
+                (object)['identifier' => 'all'],
+                (object)['identifier' => 'other'],
+            ], $content->collections);
+        }
+    }
+
+    public function testSpecialOperations() {
+        $this->assertApiResponse([
+            'data' => [
+                'findNews' => [
+                    'total' => 0
+                ],
+            ],
+        ], $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query {
+            findNews(filter: { field: "title", operator: "IS NULL" }) {
+                total
+            }
+        }'));
+        $this->assertApiResponse([
+            'data' => [
+                'findNews' => [
+                    'total' => 60
+                ],
+            ],
+        ], $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'],'query {
+            findNews(filter: { field: "title", operator: "IS NOT NULL" }) {
+                total
+            }
+        }'));
+    }
+
+    public function testGenericApiFindMethod() {
+        $result = $this->api(
+        $this->domains['marketing'],
+        $this->users['marketing_ROLE_PUBLIC'],'query {
+          find(limit: 20, types: [
+            { type: "news", collection: "other" },
+            { type: "news_category", collection: "all" }
+          ]) {
+            total,
+            result {
+              id,
+              type
+              
+              ... on NewsContent {
+                title
+              }
+              
+              ... on News_categoryContent {
+                name
+              }
+            }
+          }
+        }');
+
+        // Result should contain 10x news in other collection and 10x news_category
+        $count_news = 0;
+        $count_category = 0;
+
+        foreach($result->data->find->result as $content) {
+            if($content->type == 'news') {
+                $count_news++;
+            }
+            if($content->type == 'news_category') {
+                $count_category++;
+            }
+        }
+
+        $this->assertEquals(10, $count_news);
+        $this->assertEquals(10, $count_category);
     }
 
     public function testAPIFiltering() {

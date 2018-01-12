@@ -2,8 +2,11 @@
 
 namespace UnitedCMS\CoreBundle\Service;
 
+use Doctrine\ORM\Query\QueryException;
+use Doctrine\ORM\Query\Expr;
 use Doctrine\ORM\Query\Expr\Andx;
 use Doctrine\ORM\Query\Expr\Comparison;
+use Doctrine\ORM\Query\Expr\Func;
 use Doctrine\ORM\Query\Expr\Orx;
 
 /**
@@ -32,6 +35,7 @@ class GraphQLDoctrineFilterQueryBuilder
     private $filter = null;
     private $parameters = [];
     private $parameterCount = 0;
+    private $expr;
 
     /**
      * GraphQLDoctrineFilterQueryBuilder constructor.
@@ -43,6 +47,7 @@ class GraphQLDoctrineFilterQueryBuilder
     {
         $this->contentEntityFields = $contentEntityFields;
         $this->contentEntityPrefix = $contentEntityPrefix;
+        $this->expr = new Expr();
         $this->filter = $this->getQueryBuilderComposite($filterInput);
     }
 
@@ -68,7 +73,8 @@ class GraphQLDoctrineFilterQueryBuilder
      * Build the nested doctrine filter object.
      *
      * @param array $filterInput
-     * @return Andx|Comparison|Orx
+     * @return Andx|Comparison|Orx|string
+     * @throws QueryException
      */
     private function getQueryBuilderComposite(array $filterInput) {
 
@@ -92,10 +98,17 @@ class GraphQLDoctrineFilterQueryBuilder
             return new Orx($filters);
         }
 
-        else if(!empty($filterInput['operator']) && !empty($filterInput['field']) && !empty($filterInput['value'])) {
-            $this->parameterCount++;
-            $parameter_name = 'graphql_filter_builder_parameter' . $this->parameterCount;
-            $this->parameters[$parameter_name] = $filterInput['value'];
+        else if(!empty($filterInput['operator']) && !empty($filterInput['field'])) {
+
+            $rightSide = null;
+            $parameter_name = null;
+
+            if(!empty($filterInput['value']) && !in_array($filterInput['operator'], ['IS NULL', 'IS NOT NULL'])) {
+                $this->parameterCount++;
+                $parameter_name = 'graphql_filter_builder_parameter' . $this->parameterCount;
+                $this->parameters[$parameter_name] = $filterInput['value'];
+                $rightSide = ':' . $parameter_name;
+            }
 
             // if we filter by a content field.
             if (in_array($filterInput['field'], $this->contentEntityFields)) {
@@ -106,7 +119,20 @@ class GraphQLDoctrineFilterQueryBuilder
                 $leftSide = "JSON_EXTRACT(" . $this->contentEntityPrefix . ".data, '$." . $filterInput['field'] . "')";
             }
 
-            return new Comparison($leftSide, $filterInput['operator'], ':' . $parameter_name);
+
+            // Support for special Operator, using ex Expr builder. This should be extended in the future.
+            switch ($filterInput['operator']) {
+                case 'IS NULL': return $this->expr->isNull($leftSide);
+                case 'IS NOT NULL': return $this->expr->isNotNull($leftSide);
+                case 'LIKE': return $this->expr->like($leftSide, $rightSide);
+                default:
+                    if(in_array($filterInput['operator'], [Comparison::EQ, Comparison::GT, Comparison::GTE, Comparison::LT, Comparison::LTE, Comparison::NEQ])) {
+                        return new Comparison($leftSide, $filterInput['operator'], $rightSide);
+                    } else {
+                        $expected = join(',', [Comparison::EQ, Comparison::GT, Comparison::GTE, Comparison::LT, Comparison::LTE, Comparison::NEQ]);
+                        throw QueryException::syntaxError("Invalid filter operator. Expected one of '{$expected}', got '" . $filterInput['operator'] . "'");
+                    }
+            }
         }
 
         return null;
