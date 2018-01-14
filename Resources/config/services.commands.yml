@@ -1,0 +1,16 @@
+# Register all commands as services
+services:
+
+    UnitedCMS\CoreBundle\Command\CreateDomainCommand:
+        tags:
+            - { name: 'console.command', command: 'united:domain:create' }
+
+
+    UnitedCMS\CoreBundle\Command\CreateOrganizationCommand:
+        tags:
+            - { name: 'console.command', command: 'united:organization:create' }
+
+
+    UnitedCMS\CoreBundle\Command\CreatePlatformAdminCommand:
+        tags:
+            - { name: 'console.command', command: 'united:user:create' }
