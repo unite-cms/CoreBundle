@@ -2,16 +2,47 @@
 
 namespace UnitedCMS\CoreBundle\Command;
 
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Doctrine\ORM\EntityManager;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
+
 use UnitedCMS\CoreBundle\Entity\User;
 
-class CreatePlatformAdminCommand extends ContainerAwareCommand
+class CreatePlatformAdminCommand extends Command
 {
     private $hidePasswordInput = true;
+
+    /**
+     * @var \Doctrine\ORM\EntityManager
+     */
+    private $em;
+
+    /**
+     * @var \Symfony\Component\Validator\Validator\ValidatorInterface
+     */
+    private $validator;
+
+    /**
+     * @var Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface
+     */
+    private $password_encoder;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function __construct(EntityManager $em, ValidatorInterface $validator, UserPasswordEncoderInterface $password_encoder)
+    {
+        $this->em = $em;
+        $this->validator = $validator;
+        $this->password_encoder = $password_encoder;
+
+        parent::__construct();
+    }
 
     /**
      * This function can be called to disable hiding of the password input. This can be useful if this feature is not
@@ -36,7 +67,6 @@ class CreatePlatformAdminCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $em = $this->getContainer()->get('doctrine.orm.default_entity_manager');
 
         $helper = $this->getHelper('question');
 
@@ -61,7 +91,7 @@ class CreatePlatformAdminCommand extends ContainerAwareCommand
             ->setEmail($email)
             ->setRoles([User::ROLE_PLATFORM_ADMIN]);
 
-        $user->setPassword($this->getContainer()->get('security.password_encoder')->encodePassword(
+        $user->setPassword($this->password_encoder->encodePassword(
             $user,
             $password
         ));
@@ -78,10 +108,10 @@ class CreatePlatformAdminCommand extends ContainerAwareCommand
             return;
         }
 
-        $errors = $this->getContainer()->get('validator')->validate($user);
+        $errors = $this->validator->validate($user);
         if(count($errors) == 0) {
-            $em->persist($user);
-            $em->flush();
+            $this->em->persist($user);
+            $this->em->flush();
             $output->writeln('<info>Platform Admin was created!</info>');
         } else {
             $output->writeln("<error>\n\nThere was an error while creating the user\n \n$errors\n</error>");
