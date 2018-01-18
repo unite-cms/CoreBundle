@@ -4,7 +4,7 @@ services:
   # You can get the current organization and domain from this service, based on request information (like the path).
   united.cms.manager:
     class: UnitedCMS\CoreBundle\Service\UnitedCMSManager
-    arguments: ['@doctrine.orm.default_entity_manager', '@request_stack']
+    arguments: ['@doctrine.orm.entity_manager', '@request_stack']
     public: true
 
 
