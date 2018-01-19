@@ -762,10 +762,10 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
             }');
 
         // Get title and content partial strings from any random content.
-        $content1 = $news->data->findNews->result[rand(0, $news->data->findNews->total - 1)];
-        $content2 = $news->data->findNews->result[rand(0, $news->data->findNews->total - 1)];
-        $content1_title_part = substr($content1->title, rand(0, 50), rand(0, 20));
-        $content2_content_part = substr($content2->content, rand(0, 50), rand(0, 20));
+        $content1 = $news->data->findNews->result[rand(1, $news->data->findNews->total - 1)];
+        $content2 = $news->data->findNews->result[rand(1, $news->data->findNews->total - 1)];
+        $content1_title_part = substr($content1->title, rand(1, 50), rand(1, 20));
+        $content2_content_part = substr($content2->content, rand(1, 50), rand(1, 20));
 
         // Filter by exact title.
         $result = $this->api(
@@ -850,10 +850,9 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         foreach($result->data->findNews->result as $c) {
             $ids[] = $c->id;
         }
+
         $this->assertContains($content1->id, $ids);
         $this->assertContains($content2->id, $ids);
-
-
     }
 
     public function testAPISorting()
