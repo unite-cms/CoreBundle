@@ -2,15 +2,40 @@
 
 namespace UnitedCMS\CoreBundle\Command;
 
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Doctrine\ORM\EntityManager;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
+
 use UnitedCMS\CoreBundle\Entity\Organization;
 
-class CreateOrganizationCommand extends ContainerAwareCommand
+class CreateOrganizationCommand extends Command
 {
+
+    /**
+     * @var \Doctrine\ORM\EntityManager
+     */
+    private $em;
+
+    /**
+     * @var \Symfony\Component\Validator\Validator\ValidatorInterface
+     */
+    private $validator;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function __construct(EntityManager $em, ValidatorInterface $validator)
+    {
+        $this->em = $em;
+        $this->validator = $validator;
+
+        parent::__construct();
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -26,7 +51,6 @@ class CreateOrganizationCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $em = $this->getContainer()->get('doctrine.orm.default_entity_manager');
 
         $helper = $this->getHelper('question');
         $question = new Question('<info>Please enter the title of the organization:</info> ');
@@ -54,12 +78,12 @@ class CreateOrganizationCommand extends ContainerAwareCommand
             return;
         }
 
-        $errors = $this->getContainer()->get('validator')->validate($organization);
+        $errors = $this->validator->validate($organization);
         if(count($errors) > 0) {
             $output->writeln("<error>\n\nThere was an error while creating the organization\n \n$errors\n</error>");
         } else {
-            $em->persist($organization);
-            $em->flush();
+            $this->em->persist($organization);
+            $this->em->flush();
             $output->writeln('<info>Organization was created successfully!</info>');
         }
     }

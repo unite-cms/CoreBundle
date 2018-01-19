@@ -2,18 +2,50 @@
 
 namespace UnitedCMS\CoreBundle\Command;
 
+use Doctrine\ORM\EntityManager;
 use Doctrine\Common\Collections\ArrayCollection;
-use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
+
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
+use UnitedCMS\CoreBundle\Service\DomainDefinitionParser;
 
-class CreateDomainCommand extends ContainerAwareCommand
+class CreateDomainCommand extends Command
 {
+
+    /**
+     * @var \Doctrine\ORM\EntityManager
+     */
+    private $em;
+
+    /**
+     * @var \Symfony\Component\Validator\Validator\ValidatorInterface
+     */
+    private $validator;
+
+    /**
+     * @var \UnitedCMS\CoreBundle\Service\DomainDefinitionParser
+     */
+    private $definiton_parser;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function __construct(EntityManager $em, ValidatorInterface $validator, DomainDefinitionParser $definiton_parser)
+    {
+        $this->em = $em;
+        $this->validator = $validator;
+        $this->definiton_parser = $definiton_parser;
+
+        parent::__construct();
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -29,8 +61,7 @@ class CreateDomainCommand extends ContainerAwareCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $em = $this->getContainer()->get('doctrine.orm.default_entity_manager');
-        $organizations = $em->getRepository('UnitedCMSCoreBundle:Organization')->findAll();
+        $organizations = $this->em->getRepository('UnitedCMSCoreBundle:Organization')->findAll();
 
         $helper = $this->getHelper('question');
         $question = new ChoiceQuestion(
@@ -51,7 +82,7 @@ class CreateDomainCommand extends ContainerAwareCommand
         $helper = $this->getHelper('question');
         $question = new Question('<info>Please insert the domain definition JSON string:</info> ');
         $definition = $helper->ask($input, $output, $question);
-        $domain = $this->getContainer()->get('united.cms.domain_definition_parser')->parse($definition);
+        $domain = $this->definiton_parser->parse($definition);
         $domain->setOrganization($organization);
 
         $output->writeln(['', '', '<info>*****Domain definition*****</info>', '']);
@@ -95,12 +126,12 @@ class CreateDomainCommand extends ContainerAwareCommand
             return;
         }
 
-        $errors = $this->getContainer()->get('validator')->validate($domain);
+        $errors = $this->validator->validate($domain);
         if(count($errors) > 0) {
             $output->writeln("<error>\n\nThere was an error while creating the domain\n \n$errors\n</error>");
         } else {
-            $em->persist($domain);
-            $em->flush();
+            $this->em->persist($domain);
+            $this->em->flush();
             $output->writeln('<info>Domain was created successfully!</info>');
         }
 
