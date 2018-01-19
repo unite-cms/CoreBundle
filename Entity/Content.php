@@ -331,7 +331,9 @@ class Content implements FieldableContent
         }
 
         // If this translation is not already part of it's owners translations, add it.
-        $this->translationOf->addTranslation($this);
+        if($this->translationOf != null) {
+            $this->translationOf->addTranslation($this);
+        }
 
         return $this;
     }

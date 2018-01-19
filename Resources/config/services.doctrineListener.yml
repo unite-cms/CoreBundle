@@ -12,3 +12,10 @@ services:
     public: false
     tags:
       - { name: doctrine.event_listener, event: prePersist }
+
+  # When recovering content, create a log entry
+  UnitedCMS\CoreBundle\Subscriber\RecoverContentLogger:
+    public: false
+    arguments: ['@security.token_storage']
+    tags:
+      - { name: doctrine.event_listener, event: onFlush }

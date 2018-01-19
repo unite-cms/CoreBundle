@@ -293,6 +293,10 @@ class ContentController extends Controller
             'contentType' => $collection->getContentType(),
         ]);
 
+        if($em instanceof EntityManager) {
+            $em->getFilters()->enable('gedmo_softdeleteable');
+        }
+
         if(!$content) {
             throw $this->createNotFoundException();
         }
@@ -329,10 +333,6 @@ class ContentController extends Controller
                 $em->remove($content);
                 $em->flush();
 
-                if($em instanceof EntityManager) {
-                    $em->getFilters()->enable('gedmo_softdeleteable');
-                }
-
                 $this->addFlash('success', 'Content deleted.');
 
                 return $this->redirectToRoute(
@@ -346,10 +346,6 @@ class ContentController extends Controller
                     ]
                 );
             }
-        }
-
-        if($em instanceof EntityManager) {
-            $em->getFilters()->enable('gedmo_softdeleteable');
         }
 
         return $this->render(
@@ -387,6 +383,10 @@ class ContentController extends Controller
             'contentType' => $collection->getContentType(),
         ]);
 
+        if($em instanceof EntityManager) {
+            $em->getFilters()->enable('gedmo_softdeleteable');
+        }
+
         if(!$content) {
             throw $this->createNotFoundException();
         }
@@ -414,11 +414,6 @@ class ContentController extends Controller
             } else {
                 $content->recoverDeleted();
                 $this->getDoctrine()->getManager()->flush();
-
-                if($em instanceof EntityManager) {
-                    $em->getFilters()->enable('gedmo_softdeleteable');
-                }
-
                 $this->addFlash('success', 'Deleted content was restored.');
 
                 return $this->redirectToRoute(
@@ -432,10 +427,6 @@ class ContentController extends Controller
                     ]
                 );
             }
-        }
-
-        if($em instanceof EntityManager) {
-            $em->getFilters()->enable('gedmo_softdeleteable');
         }
 
         return $this->render(
