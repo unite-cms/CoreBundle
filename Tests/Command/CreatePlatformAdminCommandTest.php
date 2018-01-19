@@ -19,7 +19,11 @@ class CreatePlatformAdminCommandTest extends DatabaseAwareTestCase
     public function testCreateOrganizationCommand() {
 
         $application = new Application(self::$kernel);
-        $command = new CreatePlatformAdminCommand();
+        $command = new CreatePlatformAdminCommand(
+            $this->container->get('doctrine.orm.default_entity_manager'),
+            $this->container->get('validator'),
+            $this->container->get('security.password_encoder')
+        );
         $command->disableHidePasswordInput();
         $application->add($command);
 

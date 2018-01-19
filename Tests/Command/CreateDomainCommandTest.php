@@ -21,7 +21,11 @@ class CreateDomainCommandTest extends DatabaseAwareTestCase
     public function testCreateOrganizationCommand() {
 
         $application = new Application(self::$kernel);
-        $application->add(new CreateDomainCommand());
+        $application->add(new CreateDomainCommand(
+            $this->container->get('doctrine.orm.default_entity_manager'),
+            $this->container->get('validator'),
+            $this->container->get('united.cms.domain_definition_parser')
+        ));
 
         $command = $application->find('united:domain:create');
         $commandTester = new CommandTester($command);
