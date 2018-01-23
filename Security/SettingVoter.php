@@ -81,7 +81,7 @@ class SettingVoter extends Voter
             if (in_array(Organization::ROLE_ADMINISTRATOR, $organizationMember->getRoles())) {
 
                 if ($subject instanceof Setting && $subject->getSettingType()->getDomain()->getOrganization(
-                    ) === $organizationMember->getOrganization()) {
+                    )->getId() === $organizationMember->getOrganization()->getId()) {
                     return self::ACCESS_GRANTED;
                 }
             }

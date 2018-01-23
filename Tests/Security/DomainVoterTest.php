@@ -29,10 +29,10 @@ class DomainVoterTest extends SecurityVoterTestCase
         parent::setUp();
 
         $this->domain1 = new Domain();
-        $this->domain1->setOrganization($this->org1);
+        $this->domain1->setOrganization($this->org1)->setId(1);
 
         $this->domain2 = new Domain();
-        $this->domain2->setOrganization($this->org2);
+        $this->domain2->setOrganization($this->org2)->setId(2);
 
         $admin = new User();
         $admin->setRoles([User::ROLE_USER]);

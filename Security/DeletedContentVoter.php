@@ -68,7 +68,7 @@ class DeletedContentVoter extends Voter
             foreach ($token->getUser()->getOrganizations() as $organizationMember) {
                 if (in_array(Organization::ROLE_ADMINISTRATOR, $organizationMember->getRoles())) {
 
-                    if ($subject->getContentType()->getDomain()->getOrganization() === $organizationMember->getOrganization()) {
+                    if ($subject->getContentType()->getDomain()->getOrganization()->getId() === $organizationMember->getOrganization()->getId()) {
                         return self::ACCESS_GRANTED;
                     }
                 }

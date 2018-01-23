@@ -88,7 +88,7 @@ class ContentVoter extends Voter
             if (in_array(Organization::ROLE_ADMINISTRATOR, $organizationMember->getRoles())) {
 
                 if (($subject instanceof Collection || $subject instanceof Content) && $subject->getContentType()->getDomain()->getOrganization(
-                    ) === $organizationMember->getOrganization()) {
+                    )->getId() === $organizationMember->getOrganization()->getId()) {
                     return self::ACCESS_GRANTED;
                 }
             }

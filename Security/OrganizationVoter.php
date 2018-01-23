@@ -78,7 +78,7 @@ class OrganizationVoter extends Voter
 
         if ($subject instanceof Organization) {
             foreach ($token->getUser()->getOrganizations() as $organizationMember) {
-                if ($organizationMember->getOrganization() === $subject) {
+                if ($organizationMember->getOrganization()->getId() === $subject->getId()) {
                     return $this->checkPermission($attribute, $organizationMember);
                 }
             }

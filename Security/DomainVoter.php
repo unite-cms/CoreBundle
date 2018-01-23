@@ -87,7 +87,7 @@ class DomainVoter extends Voter
                 }
 
                 if (($subject instanceof Domain) && in_array($attribute, self::ENTITY_PERMISSIONS)) {
-                    if ($subject->getOrganization() === $organizationMember->getOrganization()) {
+                    if ($subject->getOrganization()->getId() === $organizationMember->getOrganization()->getId()) {
                         return self::ACCESS_GRANTED;
                     }
                 }
@@ -107,7 +107,7 @@ class DomainVoter extends Voter
 
             // Check domain member access.
             foreach ($token->getUser()->getDomains() as $domainMember) {
-                if ($domainMember->getDomain() === $subject) {
+                if ($domainMember->getDomain()->getId() === $subject->getId()) {
                     return $this->checkPermission($attribute, $domainMember->getRoles());
                 }
             }

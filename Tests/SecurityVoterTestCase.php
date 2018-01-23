@@ -32,9 +32,9 @@ abstract class SecurityVoterTestCase extends ContainerAwareTestCase
         parent::setUp();
 
         $this->org1 = new Organization();
-        $this->org1->setIdentifier('org1');
+        $this->org1->setIdentifier('org1')->setId(1);
         $this->org2 = new Organization();
-        $this->org2->setIdentifier('org2');
+        $this->org2->setIdentifier('org2')->setId(2);
 
         $platformUser = new User();
         $platformUser->setRoles([User::ROLE_PLATFORM_ADMIN]);
