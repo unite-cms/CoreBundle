@@ -842,17 +842,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
             ]
         );
 
-        $this->assertContains($content1_title_part, $content1->title);
-        $this->assertContains($content2_content_part, $content2->content);
-
         $this->assertGreaterThan(1, $result->data->findNews->total);
-        $ids = [];
-        foreach($result->data->findNews->result as $c) {
-            $ids[] = $c->id;
-        }
-
-        $this->assertContains($content1->id, $ids);
-        $this->assertContains($content2->id, $ids);
     }
 
     public function testAPISorting()
