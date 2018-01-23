@@ -3,6 +3,9 @@
 {% block navtitle %}{{ include('@UnitedCMSCore/Domain/_navtitle.html.twig') }}{% endblock %}
 {% block navigation %}{{ include('@UnitedCMSCore/Domain/_navigation.domain.html.twig') }}{% endblock navigation %}
 {% block content %}
-    <h1>Delete Domain "{{ domain }}"</h1>
-    {{ form(form) }}
+    <h1 class="uk-heading-divider">Delete Domain "{{ domain }}"</h1>
+
+    <div class="uk-card uk-card-default uk-card-body">
+        {{ form(form) }}
+    </div>
 {% endblock content %}

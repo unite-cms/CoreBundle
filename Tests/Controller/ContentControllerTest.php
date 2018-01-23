@@ -7,7 +7,6 @@ use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\HttpKernel\Client;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\DomainMember;
 use UnitedCMS\CoreBundle\Entity\Organization;
