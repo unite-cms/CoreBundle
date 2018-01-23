@@ -8,6 +8,7 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,22 +65,15 @@ class SettingController extends Controller
                 $setting->setData($data);
             }
 
-            /**
-             * @var \Symfony\Component\Validator\ConstraintViolation[] $errors
-             */
-            $errors = $this->get('validator')->validate($setting);
-            if (count($errors) > 0) {
-                foreach ($errors as $error) {
-                    $form->addError(
-                        new FormError(
-                            $error->getMessage(),
-                            $error->getMessageTemplate(),
-                            $error->getParameters(),
-                            $error->getPlural(),
-                            $error->getCause()
-                        )
-                    );
+            // If content errors were found, map them to the form.
+            $violations = $this->get('validator')->validate($setting);
+            if (count($violations) > 0) {
+                $violationMapper = new ViolationMapper();
+                foreach($violations as $violation) {
+                    $violationMapper->mapViolation($violation, $form);
                 }
+
+            // If content is valid.
             } else {
                 $this->getDoctrine()->getManager()->flush();
             }

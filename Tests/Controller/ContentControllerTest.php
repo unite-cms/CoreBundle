@@ -7,11 +7,13 @@ use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\HttpKernel\Client;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\DomainMember;
 use UnitedCMS\CoreBundle\Entity\Organization;
 use UnitedCMS\CoreBundle\Entity\OrganizationMember;
 use UnitedCMS\CoreBundle\Entity\User;
+use UnitedCMS\CoreBundle\Security\ContentVoter;
 use UnitedCMS\CoreBundle\Tests\DatabaseAwareTestCase;
 
 /**
@@ -44,14 +46,15 @@ class ContentControllerTest extends DatabaseAwareTestCase {
      */
     private $domainConfiguration = '{
     "title": "Test controller access check domain",
-    "identifier": "access_check", 
+    "identifier": "d1", 
     "content_types": [
       {
         "title": "CT 1",
         "identifier": "ct1", 
         "fields": [
             { "title": "Field 1", "identifier": "f1", "type": "text" }, 
-            { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } }
+            { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } },
+            { "title": "Field 3", "identifier": "f3", "type": "reference", "settings": { "domain": "d1", "content_type": "ct1" } }
         ], 
         "collections": [
             { "title": "All", "identifier": "all", "type": "table" },
@@ -66,7 +69,8 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         "identifier": "st1", 
         "fields": [
             { "title": "Field 1", "identifier": "f1", "type": "text" }, 
-            { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } }
+            { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } },
+            { "title": "Field 3", "identifier": "f3", "type": "reference", "settings": { "domain": "d1", "content_type": "ct1" } }
         ],
         "locales": ["de", "en"]
       }
@@ -292,6 +296,66 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->em->getFilters()->enable('gedmo_softdeleteable');
     }
 
+    public function testContentValidation() {
+
+        $content = new Content();
+        $content->setContentType($this->domain->getContentTypes()->first())->setData(['f1' => 'la', 'f2' => 'b'])->setLocale('de');
+        $this->em->persist($content);
+        $this->em->flush($content);
+        $this->assertCount(1, $this->em->getRepository('UnitedCMSCoreBundle:Content')->findAll());
+
+        // On Create.
+        $crawler = $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_create', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+        ]));
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        // Assert add form
+        $form = $crawler->filter('form');
+        $this->assertCount(1, $form);
+
+        // Submit invalid form data.
+        $form = $form->form();
+        $values = $form->getPhpValues();
+        $values['fieldable_form']['f3'] = [
+            'content' => 'any'
+        ];
+        $crawler = $this->client->request($form->getMethod(), $form->getUri(), $values, $form->getPhpFiles());
+
+        // Should stay on the same page.
+        $this->assertFalse($this->client->getResponse()->isRedirection());
+        $this->assertCount(1, $crawler->filter('#fieldable_form_f3 + .uk-alert-danger p:contains("validation.wrong_definition")'));
+
+        // On Update.
+        $crawler = $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_update', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $content->getId(),
+        ]));
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        // Assert add form
+        $form = $crawler->filter('form');
+        $this->assertCount(1, $form);
+
+        // Submit invalid form data.
+        $form = $form->form();
+        $values = $form->getPhpValues();
+        $values['fieldable_form']['f3'] = [
+            'content' => 'any'
+        ];
+        $crawler = $this->client->request($form->getMethod(), $form->getUri(), $values, $form->getPhpFiles());
+
+        // Should stay on the same page.
+        $this->assertFalse($this->client->getResponse()->isRedirection());
+        $this->assertCount(1, $crawler->filter('#fieldable_form_f3 + .uk-alert-danger p:contains("validation.wrong_definition")'));
+    }
+
     public function testDeleteDefinitelyAction() {
 
         // Create content.
@@ -300,6 +364,17 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->em->persist($content);
         $this->em->flush($content);
         $this->assertCount(1, $this->em->getRepository('UnitedCMSCoreBundle:Content')->findAll());
+
+        // Try to definitely delete unknown content.
+        $doctrineUUIDGenerator = new UuidGenerator();
+        $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_deletedefinitely', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $doctrineUUIDGenerator->generate($this->em, $content),
+        ]));
+        $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
 
         // Try to definitely delete non-deleted content.
         $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_deletedefinitely', [
@@ -312,6 +387,9 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
 
         // Delete content.
+        $content = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([
+            'contentType' => $this->domain->getContentTypes()->first()->getId(),
+        ]);
         $this->em->remove($content);
         $this->em->flush();
 
@@ -319,6 +397,23 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->em->getFilters()->disable('gedmo_softdeleteable');
         $this->assertCount(1, $this->em->getRepository('UnitedCMSCoreBundle:Content')->findAll());
         $this->em->getFilters()->enable('gedmo_softdeleteable');
+
+        // Try to access page without UPDATE right.
+        $ct = $this->em->getRepository('UnitedCMSCoreBundle:ContentType')->find($this->domain->getContentTypes()->first()->getId());
+        $ct->addPermission(ContentVoter::UPDATE, [Domain::ROLE_ADMINISTRATOR]);
+        $this->em->flush($ct);
+
+        $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_deletedefinitely', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $content->getId(),
+        ]));
+        $this->assertEquals(403, $this->client->getResponse()->getStatusCode());
+
+        $ct->addPermission(ContentVoter::UPDATE, [Domain::ROLE_EDITOR]);
+        $this->em->flush($ct);
 
         // Delete content definitely.
         $crawler = $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_deletedefinitely', [
@@ -377,6 +472,17 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->em->flush($content);
         $this->assertCount(1, $this->em->getRepository('UnitedCMSCoreBundle:Content')->findAll());
 
+        // Try to recover unknown content.
+        $doctrineUUIDGenerator = new UuidGenerator();
+        $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_recover', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $doctrineUUIDGenerator->generate($this->em, $content),
+        ]));
+        $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
+
         // Try to recover non-deleted content.
         $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_recover', [
             'organization' => $this->organization->getIdentifier(),
@@ -388,6 +494,9 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
 
         // Delete content.
+        $content = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([
+            'contentType' => $this->domain->getContentTypes()->first()->getId(),
+        ]);
         $this->em->remove($content);
         $this->em->flush();
 
@@ -395,6 +504,23 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->em->getFilters()->disable('gedmo_softdeleteable');
         $this->assertCount(1, $this->em->getRepository('UnitedCMSCoreBundle:Content')->findAll());
         $this->em->getFilters()->enable('gedmo_softdeleteable');
+
+        // Try to access page without UPDATE right.
+        $ct = $this->em->getRepository('UnitedCMSCoreBundle:ContentType')->find($this->domain->getContentTypes()->first()->getId());
+        $ct->addPermission(ContentVoter::UPDATE, [Domain::ROLE_ADMINISTRATOR]);
+        $this->em->flush($ct);
+
+        $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_recover', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $content->getId(),
+        ]));
+        $this->assertEquals(403, $this->client->getResponse()->getStatusCode());
+
+        $ct->addPermission(ContentVoter::UPDATE, [Domain::ROLE_EDITOR]);
+        $this->em->flush($ct);
 
         // Recover delete content.
         $crawler = $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_recover', [
@@ -508,6 +634,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $this->assertEquals([
             'f1' => 'Any',
             'f2' => 'b',
+            'f3' => null,
         ], $translated_content->getData());
 
 
@@ -524,6 +651,47 @@ class ContentControllerTest extends DatabaseAwareTestCase {
 
         // Make sure, that there is no create translation link on this page anymore.
         $this->assertCount(0, $crawler->filter('a.uk-button:contains("Create Translation")'));
+
+        // Remove original content.
+        $this->em->remove($content);
+        $this->em->flush();
+        $this->em->clear();
+
+        // Try to access translation page of soft-deleted content.
+        $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_translations', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $translated_content->getId(),
+        ]));
+        $this->assertTrue($this->client->getResponse()->isRedirect($this->container->get('router')->generate('unitedcms_core_content_index', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+        ])));
+        $crawler = $this->client->followRedirect();
+
+        // Assert warning.
+        $this->assertCount(1, $crawler->filter('.uk-alert-warning:contains("You cannot manage translations for this content, because it is a translation of soft-deleted content.")'));
+
+        // Recover content.
+        $this->em->getFilters()->disable('gedmo_softdeleteable');
+        $content = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy(['id' => $content->getId(), 'contentType' => $content->getContentType()]);
+        $this->em->getFilters()->enable('gedmo_softdeleteable');
+
+        $content->recoverDeleted();
+        $this->em->flush();
+        $this->em->clear();
+
+        $crawler = $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_content_translations', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
+            'collection' => 'all',
+            'content' => $translated_content->getId(),
+        ]));
 
         // Remove english translation.
         $crawler = $this->client->click($crawler->filter('a.uk-text-danger:contains("Remove as translation")')->link());
@@ -561,8 +729,8 @@ class ContentControllerTest extends DatabaseAwareTestCase {
 
         // Both content should stay present, however they are not linked as translation anymore.
         $this->assertCount(2, $this->em->getRepository('UnitedCMSCoreBundle:Content')->findAll());
-        $this->em->refresh($content);
-        $this->em->refresh($translated_content);
+        $content = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy(['id' => $content->getId(), 'contentType' => $content->getContentType()]);
+        $translated_content = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy(['id' => $translated_content->getId(), 'contentType' => $content->getContentType()]);
         $this->assertCount(0, $content->getTranslations());
         $this->assertNull($translated_content->getTranslationOf());
 

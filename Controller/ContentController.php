@@ -9,9 +9,11 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Collection\CollectionTypeInterface;
 use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\Content;
@@ -94,19 +96,15 @@ class ContentController extends Controller
             $contentInCollection->setCollection($collection);
             $content->addCollection($contentInCollection);
 
-            $errors = $this->get('validator')->validate($content);
-            if (count($errors) > 0) {
-                foreach ($errors as $error) {
-                    $form->addError(
-                        new FormError(
-                            $error->getMessage(),
-                            $error->getMessageTemplate(),
-                            $error->getParameters(),
-                            $error->getPlural(),
-                            $error->getCause()
-                        )
-                    );
+            // If content errors were found, map them to the form.
+            $violations = $this->get('validator')->validate($content);
+            if (count($violations) > 0) {
+                $violationMapper = new ViolationMapper();
+                foreach($violations as $violation) {
+                    $violationMapper->mapViolation($violation, $form);
                 }
+
+            // If content is valid.
             } else {
                 $this->getDoctrine()->getManager()->persist($content);
                 $this->getDoctrine()->getManager()->flush();
@@ -167,19 +165,15 @@ class ContentController extends Controller
 
             $content->setData($data);
 
-            $errors = $this->get('validator')->validate($content);
-            if (count($errors) > 0) {
-                foreach ($errors as $error) {
-                    $form->addError(
-                        new FormError(
-                            $error->getMessage(),
-                            $error->getMessageTemplate(),
-                            $error->getParameters(),
-                            $error->getPlural(),
-                            $error->getCause()
-                        )
-                    );
+            // If content errors were found, map them to the form.
+            $violations = $this->get('validator')->validate($content);
+            if (count($violations) > 0) {
+                $violationMapper = new ViolationMapper();
+                foreach($violations as $violation) {
+                    $violationMapper->mapViolation($violation, $form);
                 }
+
+                // If content is valid.
             } else {
                 $this->getDoctrine()->getManager()->flush();
 
@@ -233,11 +227,15 @@ class ContentController extends Controller
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $errors = $this->get('validator')->validate($content, null, ['DELETE']);
-            if (count($errors) > 0) {
-                foreach ($errors as $error) {
-                    $form->addError($error);
+            // If content errors were found, map them to the form.
+            $violations = $this->get('validator')->validate($content, NULL, ['DELETE']);
+            if (count($violations) > 0) {
+                $violationMapper = new ViolationMapper();
+                foreach($violations as $violation) {
+                    $violationMapper->mapViolation($violation, $form);
                 }
+
+            // If content is valid.
             } else {
                 $this->getDoctrine()->getManager()->remove($content);
                 $this->getDoctrine()->getManager()->flush();
@@ -316,12 +314,15 @@ class ContentController extends Controller
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $errors = $this->get('validator')->validate($content, null, ['DELETE']);
-
-            if (count($errors) > 0) {
-                foreach ($errors as $error) {
-                    $form->addError($error);
+            // If content errors were found, map them to the form.
+            $violations = $this->get('validator')->validate($content, NULL, ['DELETE']);
+            if (count($violations) > 0) {
+                $violationMapper = new ViolationMapper();
+                foreach($violations as $violation) {
+                    $violationMapper->mapViolation($violation, $form);
                 }
+
+            // If content is valid.
             } else {
 
                 // Get log entries and delete them.
@@ -406,11 +407,15 @@ class ContentController extends Controller
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
 
-            $errors = $this->get('validator')->validate($content, null, ['DELETE']);
-            if (count($errors) > 0) {
-                foreach ($errors as $error) {
-                    $form->addError($error);
+            // If content errors were found, map them to the form.
+            $violations = $this->get('validator')->validate($content, NULL, ['DELETE']);
+            if (count($violations) > 0) {
+                $violationMapper = new ViolationMapper();
+                foreach($violations as $violation) {
+                    $violationMapper->mapViolation($violation, $form);
                 }
+
+            // If content is valid.
             } else {
                 $content->recoverDeleted();
                 $this->getDoctrine()->getManager()->flush();
@@ -541,20 +546,15 @@ class ContentController extends Controller
                     } else {
                         $content->addTranslation($translation);
 
-                        $errors = $this->get('validator')->validate($content);
-                        if (count($errors) > 0) {
-                            foreach ($errors as $error) {
-                                $form->addError(
-                                    new FormError(
-                                        $error->getMessage(),
-                                        $error->getMessageTemplate(),
-                                        $error->getParameters(),
-                                        $error->getPlural(),
-                                        $error->getCause()
-                                    )
-                                );
+                        // If content errors were found, map them to the form.
+                        $violations = $this->get('validator')->validate($content);
+                        if (count($violations) > 0) {
+                            $violationMapper = new ViolationMapper();
+                            foreach($violations as $violation) {
+                                $violationMapper->mapViolation($violation, $form);
                             }
 
+                        // If content is valid.
                         } else {
                             $this->getDoctrine()->getManager()->flush();
                             $this->addFlash('success', 'Translation added.');

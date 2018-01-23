@@ -191,7 +191,7 @@ class ReferenceFieldType extends FieldType
                 'validation.wrong_definition',
                 [],
                 null,
-                null,
+                '[' . $this->getIdentifier() . ']',
                 $data
             );
         }

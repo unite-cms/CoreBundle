@@ -45,7 +45,7 @@ class SettingControllerTest extends DatabaseAwareTestCase {
      */
     private $domainConfiguration = '{
     "title": "Test controller access check domain",
-    "identifier": "access_check", 
+    "identifier": "d1", 
     "content_types": [
       {
         "title": "CT 1",
@@ -67,7 +67,8 @@ class SettingControllerTest extends DatabaseAwareTestCase {
         "identifier": "st1", 
         "fields": [
             { "title": "Field 1", "identifier": "f1", "type": "text" }, 
-            { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } }
+            { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } },
+            { "title": "Field 3", "identifier": "f3", "type": "reference", "settings": { "domain": "d1", "content_type": "ct1" } }
         ],
         "permissions": {
             "view setting": [
@@ -166,6 +167,41 @@ class SettingControllerTest extends DatabaseAwareTestCase {
         $this->assertEquals('b', $setting->getData()['f2']);
     }
 
+    public function testSettingValidation() {
+
+        // Create setting.
+        $setting = new Setting();
+        $setting->setSettingType($this->domain->getSettingTypes()->first())->setData(['f1' => 'la', 'f2' => 'b'])->setLocale('de');
+        $this->em->persist($setting);
+        $this->em->flush($setting);
+        $this->assertCount(1, $this->em->getRepository('UnitedCMSCoreBundle:Setting')->findAll());
+
+        // Test update content validation.
+        $crawler = $this->client->request('GET', $this->container->get('router')->generate('unitedcms_core_setting_index', [
+            'organization' => $this->organization->getIdentifier(),
+            'domain' => $this->domain->getIdentifier(),
+            'setting_type' => $this->domain->getSettingTypes()->first()->getIdentifier(),
+        ]));
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        // Assert add form
+        $form = $crawler->filter('form');
+        $this->assertCount(1, $form);
+
+        // Submit invalid form data.
+        $form = $form->form();
+        $values = $form->getPhpValues();
+        $values['fieldable_form']['f3'] = [
+            'content' => 'any'
+        ];
+        $crawler = $this->client->request($form->getMethod(), $form->getUri(), $values, $form->getPhpFiles());
+
+        // Should stay on the same page.
+        $this->assertFalse($this->client->getResponse()->isRedirection());
+        echo $crawler->text();
+        $this->assertCount(1, $crawler->filter('#fieldable_form_f3 + .uk-alert-danger p:contains("validation.wrong_definition")'));
+    }
+
     public function testTranslateActions() {
 
         // Create setting.
@@ -225,6 +261,7 @@ class SettingControllerTest extends DatabaseAwareTestCase {
         $this->assertEquals([
             'f1' => 'Any',
             'f2' => 'b',
+            'f3' => null,
         ], $setting_en->getData());
 
 
