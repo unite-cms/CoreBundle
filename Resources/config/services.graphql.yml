@@ -32,7 +32,7 @@ services:
     # Query Type implementations, that get registered in the schema_type_manager.
     UnitedCMS\CoreBundle\SchemaType\Types\QueryType:
         tags: [united_cms.graphql.schema_type]
-        arguments: ['@united.cms.graphql.schema_type_manager', '@doctrine.orm.default_entity_manager', '@united.cms.manager', '@security.authorization_checker', '@knp_paginator']
+        arguments: ['@united.cms.graphql.schema_type_manager', '@doctrine.orm.default_entity_manager', '@united.cms.manager', '@security.authorization_checker', '@knp_paginator', '@validator', '@united.cms.fieldable_form_builder']
 
     UnitedCMS\CoreBundle\SchemaType\Types\ContentResultInterface:
         tags: [united_cms.graphql.schema_type]
@@ -67,3 +67,6 @@ services:
     UnitedCMS\CoreBundle\SchemaType\Types\Input\FilterInput:
         tags: [united_cms.graphql.schema_type]
         arguments: ['@united.cms.graphql.schema_type_manager']
+
+    UnitedCMS\CoreBundle\SchemaType\Types\Input\ReferenceFieldTypeInput:
+        tags: [united_cms.graphql.schema_type]

@@ -3,6 +3,7 @@
 namespace UnitedCMS\CoreBundle\SchemaType\Factories;
 
 use Doctrine\ORM\EntityManager;
+use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\StringType;
@@ -48,15 +49,21 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
             array_pop($nameParts);
         }
 
-        if(count($nameParts) !== 2) {
-            return false;
+        // Support for content type.
+        if(count($nameParts) == 2) {
+            if($nameParts[1] == 'Content') {
+                return true;
+            }
         }
 
-        if($nameParts[1] !== 'Content') {
-            return false;
+        // Support for content input type.
+        if(count($nameParts) == 3) {
+            if($nameParts[1] == 'Content' && $nameParts[2] == 'Input') {
+                return true;
+            }
         }
 
-        return true;
+        return false;
     }
 
     /**
@@ -76,6 +83,8 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
         $nameParts = preg_split('/(?=[A-Z])/', $schemaTypeName, -1, PREG_SPLIT_NO_EMPTY);
 
         $identifier = strtolower($nameParts[0]);
+
+        $isInputType = (count($nameParts) == 3 && $nameParts[2] == 'Input');
 
         /**
          * @var ContentType $contentType
@@ -109,69 +118,92 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
         foreach ($contentType->getFields() as $field) {
             $fieldTypes[$field->getIdentifier()] = $this->fieldTypeManager->getFieldType($field->getType());
             $fieldTypes[$field->getIdentifier()]->setEntityField($field);
-            $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($schemaTypeManager, $nestingLevel + 1);
+
+            // If we want to create an InputObjectType, get GraphQLInputType.
+            if($isInputType) {
+                $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLInputType($schemaTypeManager, $nestingLevel + 1);
+            } else {
+                $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($schemaTypeManager, $nestingLevel + 1);
+            }
+
             $fieldTypes[$field->getIdentifier()]->unsetEntityField();
         }
 
-        return new ObjectType(
-            [
-                'name' => ucfirst($identifier) . 'Content' . ($nestingLevel > 0 ? 'Level' . $nestingLevel : ''),
-                'fields' => array_merge(
-                    [
-                        'id' => Type::id(),
-                        'type' => Type::string(),
-                        'collections' => Type::listOf($schemaTypeManager->getSchemaType('CollectionInterface')),
-                        'created' => Type::int(),
-                        'updated' => Type::int(),
-                        'deleted' => Type::int(),
-                    ],
-                    $fields
-                ),
-                'resolveField' => function ($value, array $args, $context, ResolveInfo $info) use (
-                    $contentType,
-                    $fieldTypes
-                ) {
+        if($isInputType) {
 
-                    if (!$value instanceof Content) {
-                        throw new \InvalidArgumentException(
-                            'Value must be instance of '.Content::class.'.'
-                        );
-                    }
+            if($contentType->getLocales() > 0) {
+                $fields = array_merge([
+                    'locale' => Type::nonNull(Type::string())
+                ], $fields);
+            }
 
-                    switch ($info->fieldName) {
-                        case 'id':
-                            return $value->getId();
-                        case 'type':
-                            return $value->getContentType()->getIdentifier();
-                        case 'created':
-                            return $value->getCreated()->getTimestamp();
-                        case 'updated':
-                            return $value->getUpdated()->getTimestamp();
-                        case 'deleted':
-                            return $value->getDeleted() ? $value->getDeleted()->getTimestamp() : null;
-                        Case 'collections':
-                            return $value->getCollections();
-                        default:
+            return new InputObjectType(
+                [
+                    'name' => ucfirst($identifier) . 'ContentInput' . ($nestingLevel > 0 ? 'Level' . $nestingLevel : ''),
+                    'fields' => $fields,
+                ]
+            );
+        } else {
+            return new ObjectType(
+                [
+                    'name' => ucfirst($identifier) . 'Content' . ($nestingLevel > 0 ? 'Level' . $nestingLevel : ''),
+                    'fields' => array_merge(
+                        [
+                            'id' => Type::id(),
+                            'type' => Type::string(),
+                            'collections' => Type::listOf($schemaTypeManager->getSchemaType('CollectionInterface')),
+                            'created' => Type::int(),
+                            'updated' => Type::int(),
+                            'deleted' => Type::int(),
+                        ],
+                        $fields
+                    ),
+                    'resolveField' => function ($value, array $args, $context, ResolveInfo $info) use (
+                        $contentType,
+                        $fieldTypes
+                    ) {
 
-                            if (!array_key_exists($info->fieldName, $fieldTypes)) {
-                                return null;
-                            }
-
-                            $fieldTypes[$info->fieldName]->setEntityField(
-                                $contentType->getFields()->get($info->fieldName)
+                        if (!$value instanceof Content) {
+                            throw new \InvalidArgumentException(
+                                'Value must be instance of ' . Content::class . '.'
                             );
-                            $fieldData = array_key_exists(
-                                $info->fieldName,
-                                $value->getData()
-                            ) ? $value->getData()[$info->fieldName] : null;
-                            $data = $fieldTypes[$info->fieldName]->resolveGraphQLData($fieldData);
-                            $fieldTypes[$info->fieldName]->unsetEntityField();
+                        }
 
-                            return $data;
-                    }
-                },
-                'interfaces' => [$schemaTypeManager->getSchemaType('ContentInterface')],
-            ]
-        );
+                        switch ($info->fieldName) {
+                            case 'id':
+                                return $value->getId();
+                            case 'type':
+                                return $value->getContentType()->getIdentifier();
+                            case 'created':
+                                return $value->getCreated()->getTimestamp();
+                            case 'updated':
+                                return $value->getUpdated()->getTimestamp();
+                            case 'deleted':
+                                return $value->getDeleted() ? $value->getDeleted()->getTimestamp() : null;
+                            Case 'collections':
+                                return $value->getCollections();
+                            default:
+
+                                if (!array_key_exists($info->fieldName, $fieldTypes)) {
+                                    return null;
+                                }
+
+                                $fieldTypes[$info->fieldName]->setEntityField(
+                                    $contentType->getFields()->get($info->fieldName)
+                                );
+                                $fieldData = array_key_exists(
+                                    $info->fieldName,
+                                    $value->getData()
+                                ) ? $value->getData()[$info->fieldName] : null;
+                                $data = $fieldTypes[$info->fieldName]->resolveGraphQLData($fieldData);
+                                $fieldTypes[$info->fieldName]->unsetEntityField();
+
+                                return $data;
+                        }
+                    },
+                    'interfaces' => [$schemaTypeManager->getSchemaType('ContentInterface')],
+                ]
+            );
+        }
     }
 }

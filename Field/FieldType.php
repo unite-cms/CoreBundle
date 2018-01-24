@@ -97,6 +97,10 @@ abstract class FieldType implements FieldTypeInterface
         return Type::string();
     }
 
+    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
+        return Type::string();
+    }
+
     function resolveGraphQLData($value)
     {
         if (!$this->fieldIsPresent()) {

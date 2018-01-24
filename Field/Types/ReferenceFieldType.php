@@ -137,6 +137,11 @@ class ReferenceFieldType extends FieldType
         return $schemaTypeManager->getSchemaType($name, $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 
+    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
+    {
+        return $schemaTypeManager->getSchemaType('ReferenceFieldTypeInput', $this->unitedCMSManager->getDomain(), $nestingLevel);
+    }
+
     function resolveGraphQLData($value)
     {
         if(empty($value)) {
