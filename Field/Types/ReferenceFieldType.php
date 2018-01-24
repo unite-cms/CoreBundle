@@ -3,11 +3,9 @@
 namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Doctrine\ORM\EntityManager;
-use GraphQL\Type\Definition\Type;
 use Symfony\Bridge\Twig\TwigEngine;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\InvalidArgumentException;
-use Symfony\Component\Form\Exception\TransformationFailedException;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -192,13 +190,29 @@ class ReferenceFieldType extends FieldType
 
         if(empty($data['domain']) || empty($data['content_type']) || empty($data['content'])) {
             $violations[] = new ConstraintViolation(
-                'validation.wrong_definition',
-                'validation.wrong_definition',
+                'validation.missing_definition',
+                'validation.missing_definition',
                 [],
                 null,
                 '[' . $this->getIdentifier() . ']',
                 $data
             );
+        }
+
+        // Try to resolve the data to check if the current user is allowed to access it.
+        else {
+            try {
+                $this->resolveGraphQLData($data);
+            } catch (InvalidArgumentException $e) {
+                $violations[] = new ConstraintViolation(
+                    'validation.wrong_definition',
+                    'validation.wrong_definition',
+                    [],
+                    null,
+                    '[' . $this->getIdentifier() . ']',
+                    $data
+                );
+            }
         }
 
         return $violations;

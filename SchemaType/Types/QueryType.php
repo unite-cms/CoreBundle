@@ -3,6 +3,7 @@
 namespace UnitedCMS\CoreBundle\SchemaType\Types;
 
 use Doctrine\ORM\EntityManager;
+use GraphQL\Error\UserError;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Knp\Component\Pager\Pagination\AbstractPagination;
@@ -50,32 +51,18 @@ class QueryType extends AbstractType
      */
     private $paginator;
 
-    /**
-     * @var ValidatorInterface $validator
-     */
-    private $validator;
-
-    /**
-     * @var FieldableFormBuilder $fieldableFormBuilder
-     */
-    private $fieldableFormBuilder;
-
     public function __construct(
         SchemaTypeManager $schemaTypeManager,
         EntityManager $entityManager,
         UnitedCMSManager $unitedCMSManager,
         AuthorizationChecker $authorizationChecker,
-        Paginator $paginator,
-        ValidatorInterface $validator,
-        FieldableFormBuilder $fieldableFormBuilder
+        Paginator $paginator
     ) {
         $this->schemaTypeManager = $schemaTypeManager;
         $this->entityManager = $entityManager;
         $this->unitedCMSManager = $unitedCMSManager;
         $this->authorizationChecker = $authorizationChecker;
         $this->paginator = $paginator;
-        $this->validator = $validator;
-        $this->fieldableFormBuilder = $fieldableFormBuilder;
         parent::__construct();
     }
 
@@ -166,40 +153,6 @@ class QueryType extends AbstractType
                     ],
                 ],
             ];
-
-            $fields['create' . $key] = [
-                'type' => $this->schemaTypeManager->getSchemaType($key . 'Content', $this->unitedCMSManager->getDomain()),
-                'args' => [
-                    'collection' => [
-                        'type' => Type::string(),
-                        'description' => 'Set the collection to get create the content in. Default is "all".',
-                        'defaultValue' => Collection::DEFAULT_COLLECTION_IDENTIFIER,
-                    ],
-                ],
-            ];
-
-            $fields['update' . $key] = [
-                'type' => $this->schemaTypeManager->getSchemaType($key . 'Content', $this->unitedCMSManager->getDomain()),
-                'args' => [
-                    'id' => [
-                        'type' => Type::nonNull(Type::id()),
-                        'description' => 'The id of the content item to get.',
-                    ],
-                ],
-            ];
-
-            // If this content type has defined fields, we can create and update content with data.
-            $fullContentType = $this->entityManager->getRepository('UnitedCMSCoreBundle:ContentType')->find($contentType->getId());
-            if($fullContentType->getFields()->count() > 0) {
-                $fields['create' . $key]['args']['data'] = [
-                    'type' => Type::nonNull($this->schemaTypeManager->getSchemaType($key . 'ContentInput', $this->unitedCMSManager->getDomain())),
-                    'description' => 'The content data to save.',
-                ];
-                $fields['update' . $key]['args']['data'] = [
-                    'type' => Type::nonNull($this->schemaTypeManager->getSchemaType($key . 'ContentInput', $this->unitedCMSManager->getDomain())),
-                    'description' => 'The content data to save.',
-                ];
-            }
         }
 
         // Append Setting types.
@@ -223,6 +176,7 @@ class QueryType extends AbstractType
      * @param ResolveInfo $info
      *
      * @return mixed
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
     protected function resolveField($value, array $args, $context, ResolveInfo $info)
     {
@@ -233,9 +187,7 @@ class QueryType extends AbstractType
             $content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->find($id);
 
             if ($content && !$this->authorizationChecker->isGranted(ContentVoter::VIEW, $content)) {
-                throw new \InvalidArgumentException(
-                    "You are not allowed to view content with id '$id'."
-                );
+                throw new UserError("You are not allowed to view content with id '$id'.");
             }
 
             return $content;
@@ -244,22 +196,6 @@ class QueryType extends AbstractType
         // Resolve single setting type.
         elseif (substr($info->fieldName, -strlen('Setting')) === 'Setting') {
             return $this->resolveSetting(strtolower(substr($info->fieldName, 0, -strlen('Setting'))), $value, $args, $context, $info);
-        }
-
-        // Resolve create content type
-        if(substr($info->fieldName, 0, 6) == 'create') {
-            return $this->resolveCreateContent(
-                strtolower(substr($info->fieldName, 6)),
-                $value, $args, $context, $info
-            );
-        }
-
-        // Resolve update content type
-        if(substr($info->fieldName, 0, 6) == 'update') {
-            return $this->resolveUpdateContent(
-                strtolower(substr($info->fieldName, 6, -strlen('Content'))),
-                $value, $args, $context, $info
-            );
         }
 
         // Resolve list content type.
@@ -379,143 +315,6 @@ class QueryType extends AbstractType
     }
 
     /**
-     * Resolve create content.
-     *
-     * @param $identifier
-     * @param $value
-     * @param $args
-     * @param $context
-     * @param \GraphQL\Type\Definition\ResolveInfo $info
-     *
-     * @return mixed
-     */
-    private function resolveCreateContent($identifier, $value, $args, $context, ResolveInfo $info) {
-
-        if (!$contentType = $this->entityManager->getRepository('UnitedCMSCoreBundle:ContentType')->findOneBy(
-            [
-                'domain' => $this->unitedCMSManager->getDomain(),
-                'identifier' => $identifier,
-            ]
-        )) {
-            throw new \InvalidArgumentException("ContentType '$identifier' was not found in domain.");
-        }
-
-        if (!$collection = $this->entityManager->getRepository('UnitedCMSCoreBundle:Collection')->findOneBy(
-            [
-                'contentType' => $contentType,
-                'identifier' => $args['collection'],
-            ]
-        )) {
-            throw new \InvalidArgumentException("Collection '" . $args['collection'] . "' was not found for given content type.");
-        }
-
-        if (!$this->authorizationChecker->isGranted(ContentVoter::CREATE, $collection)) {
-            throw new \InvalidArgumentException(
-                "You are not allowed to create content in content type '$contentType'."
-            );
-        }
-
-        $content = new Content();
-        $form = $this->fieldableFormBuilder->createForm($contentType, $content, ['csrf_protection' => false]);
-        $form->submit($args['data']);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-
-            $data = $form->getData();
-
-            if (isset($data['locale'])) {
-                $content->setLocale($data['locale']);
-                unset($data['locale']);
-            }
-
-            $content
-                ->setContentType($contentType)
-                ->setData($data);
-
-
-            $contentInCollection = new ContentInCollection();
-            $contentInCollection->setCollection($collection);
-            $content->addCollection($contentInCollection);
-
-            // If content errors were found, map them to the form.
-            $violations = $this->validator->validate($content);
-            if (count($violations) > 0) {
-                $violationMapper = new ViolationMapper();
-                foreach ($violations as $violation) {
-                    $violationMapper->mapViolation($violation, $form);
-                }
-
-            // If content is valid.
-            } else {
-                $this->entityManager->persist($content);
-                $this->entityManager->flush();
-
-                return $content;
-            }
-        }
-
-        throw new \InvalidArgumentException((string)$form->getErrors(true, true));
-    }
-
-    /**
-     * Resolve update content.
-     *
-     * @param $identifier
-     * @param $value
-     * @param $args
-     * @param $context
-     * @param \GraphQL\Type\Definition\ResolveInfo $info
-     *
-     * @return mixed
-     */
-    private function resolveUpdateContent($identifier, $value, $args, $context, ResolveInfo $info) {
-
-        $id = $args['id'];
-        $content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->find($id);
-
-        if(!$content) {
-            return null;
-        }
-
-        if (!$this->authorizationChecker->isGranted(ContentVoter::UPDATE, $content)) {
-            throw new \InvalidArgumentException(
-                "You are not allowed to update content with id '$id'."
-            );
-        }
-
-        $form = $this->fieldableFormBuilder->createForm($content->getContentType(), $content, ['csrf_protection' => false]);
-        $form->submit($args['data']);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-
-            $data = $form->getData();
-
-            if (isset($data['locale'])) {
-                $content->setLocale($data['locale']);
-                unset($data['locale']);
-            }
-
-            $content->setData($data);
-
-            // If content errors were found, map them to the form.
-            $violations = $this->validator->validate($content);
-            if (count($violations) > 0) {
-                $violationMapper = new ViolationMapper();
-                foreach ($violations as $violation) {
-                    $violationMapper->mapViolation($violation, $form);
-                }
-
-            // If content is valid.
-            } else {
-                $this->entityManager->flush();
-                return $content;
-            }
-        }
-
-        throw new \InvalidArgumentException($form->getErrors(true, true));
-    }
-
-    /**
      * Resolve the setting result.
      *
      * @param $identifier
@@ -534,7 +333,7 @@ class QueryType extends AbstractType
                 'identifier' => $identifier,
             ]
         )) {
-            throw new \InvalidArgumentException("SettingType '$identifier' was not found in domain.");
+            throw new UserError("SettingType '$identifier' was not found in domain.");
         }
 
 
@@ -544,9 +343,7 @@ class QueryType extends AbstractType
         $setting = $settingType->getSetting();
 
         if (!$this->authorizationChecker->isGranted(SettingVoter::VIEW, $setting)) {
-            throw new \InvalidArgumentException(
-                "You are not allowed to view setting of type '$identifier'."
-            );
+            throw new UserError("You are not allowed to view setting of type '$identifier'.");
         }
 
         // Create setting schema type for current domain.

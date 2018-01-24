@@ -1156,4 +1156,166 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         }
 
     }
+
+    public function testAPICreateAndUpdateMethod() {
+
+        // Try to create content without permissions.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'mutation {
+                createNews_category(data: { name: "First Category" }) {
+                    id, 
+                    name
+                }
+            }');
+
+        $this->assertNotEmpty($response->errors);
+        $this->assertEquals("You are not allowed to create content in content type 'News Category'.", $response->errors[0]->message);
+
+        // Try to create content with permissions.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation {
+                createNews_category(data: { name: "First Category" }) {
+                    id, 
+                    name
+                }
+            }');
+
+        $this->assertTrue(empty($response->errors));
+        $category = $response->data->createNews_category;
+        $this->assertEquals('First Category', $category->name);
+        $this->assertNotEmpty($category->id);
+
+        // Now create a news content with invalid content.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation($category: ReferenceFieldTypeInput) {
+                createNews(data: { title: "First News", content: "<p>Hello World</p>", category: $category }) {
+                    id, 
+                    title,
+                    content,
+                    category {
+                      id,
+                      name
+                    }
+                }
+            }', [
+                'category' => [
+                    'domain' => 'marketing',
+                    'content_type' => 'news_category',
+                    'content' => 'foo',
+                ]
+            ]);
+
+        $this->assertNotEmpty($response->errors);
+        $this->assertContains("ERROR: validation.wrong_definition", $response->errors[0]->message);
+
+        // Now create a news content with valid content.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation($category: ReferenceFieldTypeInput) {
+                createNews(data: { title: "First News", content: "<p>Hello World</p>", category: $category }) {
+                    id, 
+                    title,
+                    content,
+                    category {
+                      id,
+                      name
+                    }
+                }
+            }', [
+            'category' => [
+                'domain' => 'marketing',
+                'content_type' => 'news_category',
+                'content' => $category->id,
+            ]
+        ]);
+
+        $news = $response->data->createNews;
+        $this->assertTrue(empty($response->errors));
+        $this->assertNotEmpty($news->id);
+        $this->assertNotEmpty($news->title);
+        $this->assertNotEmpty($news->content);
+        $this->assertNotEmpty($news->category);
+        $this->assertEquals($category, $news->category);
+
+        // Update the category, but with wrong user.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_PUBLIC'], 'mutation($id: ID!) {
+                updateNews_category(id: $id, data: { name: "Updated Category Title" }) {
+                    id, 
+                    name
+                }
+            }', ['id' => $category->id]);
+
+        $this->assertNotEmpty($response->errors);
+        $this->assertEquals("You are not allowed to update content with id '" . $category->id . "'.", $response->errors[0]->message);
+
+        // Update the category with right user.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation($id: ID!) {
+                updateNews_category(id: $id, data: { name: "Updated Category Title" }) {
+                    id, 
+                    name
+                }
+            }', ['id' => $category->id]);
+
+        $this->assertTrue(empty($response->errors));
+        $this->assertEquals((object)[
+            'id' => $category->id,
+            'name' => 'Updated Category Title',
+        ], $response->data->updateNews_category);
+
+        // Update a news content with invalid content.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation($id: ID!, $category: ReferenceFieldTypeInput) {
+                updateNews(id: $id, data: { title: "Updated News", content: "<p>Hello new World</p>", category: $category }) {
+                    id, 
+                    title,
+                    content,
+                    category {
+                      id,
+                      name
+                    }
+                }
+            }', [
+            'id' => $news->id,
+            'category' => [
+                'domain' => 'marketing',
+                'content_type' => 'news_category',
+                'content' => 'foo',
+            ]
+        ]);
+
+        $this->assertNotEmpty($response->errors);
+        $this->assertContains("ERROR: validation.wrong_definition", $response->errors[0]->message);
+
+        // update a news content with valid content.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation($id: ID!, $category: ReferenceFieldTypeInput) {
+                updateNews(id: $id, data: { title: "Updated News", content: "<p>Hello new World</p>", category: $category }) {
+                    id, 
+                    title,
+                    content,
+                    category {
+                      id,
+                      name
+                    }
+                }
+            }', [
+            'id' => $news->id,
+            'category' => null
+        ]);
+
+        $this->assertTrue(empty($response->errors));
+        $this->assertEquals($news->id, $response->data->updateNews->id);
+        $this->assertEquals("Updated News", $response->data->updateNews->title);
+        $this->assertEquals("<p>Hello new World</p>", $response->data->updateNews->content);
+        $this->assertNull($response->data->updateNews->category);
+    }
 }

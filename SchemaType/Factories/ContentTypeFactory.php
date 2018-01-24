@@ -131,7 +131,7 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
 
         if($isInputType) {
 
-            if($contentType->getLocales() > 0) {
+            if(count($contentType->getLocales()) > 0) {
                 $fields = array_merge([
                     'locale' => Type::nonNull(Type::string())
                 ], $fields);
