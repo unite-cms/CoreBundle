@@ -94,6 +94,7 @@ export default {
             selectable: !bag.select.is_mode_none,
             sort: bag.settings.sort.asc,
             sortFieldKey: bag.settings.sort.field,
+            filter: bag.settings.filter,
             contentType: bag.settings.contentType,
             view: bag.settings.view,
             columns: bag.settings.columns,
@@ -196,7 +197,7 @@ export default {
               }`, {
                 limit: this.limit,
                 page: this.page,
-                view: this.view,
+                filter: this.filter,
                 sort: [{
                     field: this.sortFieldKey,
                     order: (this.sort ? 'ASC' : 'DESC')

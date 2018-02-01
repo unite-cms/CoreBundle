@@ -13,6 +13,7 @@ class TableViewType extends ViewType
         'columns',
         'sort_field',
         'sort_asc',
+        "filter",
     ];
 
     function getTemplateRenderParameters(string $selectMode = self::SELECT_MODE_NONE): array
@@ -20,6 +21,7 @@ class TableViewType extends ViewType
         $columns = $this->view->getSettings()->columns ?? [];
         $sort_field = $this->view->getSettings()->sort_field ?? 'updated';
         $sort_asc = $this->view->getSettings()->sort_asc ?? false;
+        $filter = $this->view->getSettings()->filter ?? null;
 
         // If no columns are defined, try to find any human readable key identifier and also add common fields.
         $fields = $this->view->getContentType()->getFields();
@@ -47,6 +49,7 @@ class TableViewType extends ViewType
                 'field' => $sort_field,
                 'asc' => $sort_asc,
             ],
+            'filter' => $filter,
             'columns' => $columns,
             'View' => $this->view->getIdentifier(),
             'contentType' => $this->view->getContentType()->getIdentifier(),
