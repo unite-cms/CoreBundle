@@ -89,27 +89,27 @@ class ContentVoterApiClientTest extends SecurityVoterTestCase
 
         // All other users can preform the actions they have access to.
         $this->container->get('security.token_storage')->setToken($this->u['domain_admin']);
-        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
-        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1));
         $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content1));
         $this->assertTrue($dm->isGranted([ContentVoter::UPDATE], $this->content1));
         $this->assertTrue($dm->isGranted([ContentVoter::DELETE], $this->content1));
 
-        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
-        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2));
         $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
 
         $this->container->get('security.token_storage')->setToken($this->u['domain_editor']);
-        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
-        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1));
         $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content1));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content1));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content1));
 
-        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
-        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2));
         $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
@@ -126,27 +126,27 @@ class ContentVoterApiClientTest extends SecurityVoterTestCase
         $reflector->setValue($this->content2, new \DateTime());
 
         $this->container->get('security.token_storage')->setToken($this->u['domain_admin']);
-        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
-        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1));
         $this->assertTrue($dm->isGranted([ContentVoter::VIEW], $this->content1));
         $this->assertTrue($dm->isGranted([ContentVoter::UPDATE], $this->content1));
         $this->assertTrue($dm->isGranted([ContentVoter::DELETE], $this->content1));
 
-        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
-        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2));
         $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));
 
         $this->container->get('security.token_storage')->setToken($this->u['domain_editor']);
-        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1->getCollection('all')));
-        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1->getCollection('all')));
+        $this->assertTrue($dm->isGranted([ContentVoter::LIST], $this->contentType1));
+        $this->assertTrue($dm->isGranted([ContentVoter::CREATE], $this->contentType1));
         $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content1));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content1));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content1));
 
-        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2->getCollection('all')));
-        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2->getCollection('all')));
+        $this->assertFalse($dm->isGranted([ContentVoter::LIST], $this->contentType2));
+        $this->assertFalse($dm->isGranted([ContentVoter::CREATE], $this->contentType2));
         $this->assertFalse($dm->isGranted([ContentVoter::VIEW], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::UPDATE], $this->content2));
         $this->assertFalse($dm->isGranted([ContentVoter::DELETE], $this->content2));

@@ -11,9 +11,7 @@ use Knp\Component\Pager\Paginator;
 use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Entity\Setting;
 use UnitedCMS\CoreBundle\Form\FieldableFormBuilder;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
@@ -96,8 +94,8 @@ class QueryType extends AbstractType
                     'description' => 'Set one optional filter condition.',
                 ],
                 'types' => [
-                    'type' => Type::listOf($this->schemaTypeManager->getSchemaType('ContentTypeCollectionInput')),
-                    'description' => 'Set all additional content type and collection tuple to get content from. With this option you can get content from multiple content types and/or collections.',
+                    'type' => Type::listOf(Type::string()),
+                    'description' => 'Set all content types to get content from. With this option you can get content from multiple content types.',
                 ],
                 'deleted' => [
                     'type' => Type::boolean(),
@@ -123,11 +121,6 @@ class QueryType extends AbstractType
             $fields['find' . $key] = [
                 'type' => $this->schemaTypeManager->getSchemaType($key . 'ContentResult', $this->unitedCMSManager->getDomain()),
                 'args' => [
-                    'collection' => [
-                        'type' => Type::string(),
-                        'description' => 'Set the collection to get content form. Default is "all".',
-                        'defaultValue' => Collection::DEFAULT_COLLECTION_IDENTIFIER,
-                    ],
                     'limit' => [
                         'type' => Type::int(),
                         'description' => 'Set maximal number of content items to return.',
@@ -200,11 +193,7 @@ class QueryType extends AbstractType
 
         // Resolve list content type.
         elseif(substr($info->fieldName, 0, 4) == 'find' && strlen($info->fieldName) > 4) {
-            $args['types'] = [[
-                'type' => strtolower(substr($info->fieldName, 4)),
-                'collection' => $args['collection'],
-            ]];
-            unset($args['collection']);
+            $args['types'] = [strtolower(substr($info->fieldName, 4))];
             return $this->resolveContent(substr($info->fieldName, 4) . 'ContentResult',  $value, $args, $context, $info);
         }
 
@@ -237,30 +226,25 @@ class QueryType extends AbstractType
         $args['page'] = $args['page'] < 1 ? 1 : $args['page'];
         $args['deleted'] = $args['deleted'] ?? false;
 
-        // Get all requested collections the user can access.
-        $collections = [];
-        foreach ($args['types'] as $type) {
-            if ($collection = $this->entityManager->getRepository('UnitedCMSCoreBundle:Collection')->findByIdentifiers(
-                $this->unitedCMSManager->getOrganization()->getIdentifier(),
-                $this->unitedCMSManager->getDomain()->getIdentifier(),
-                $type['type'],
-                $type['collection']
-            )) {
-                if ($this->authorizationChecker->isGranted(ContentVoter::LIST, $collection)) {
-                    $collections[] = $collection;
-                }
+        // Get all requested contentTypes, the user can access.
+        $contentTypes = [];
+        foreach($this->entityManager->getRepository('UnitedCMSCoreBundle:ContentType')->findBy([
+            'identifier' => $args['types'],
+        ]) as $contentType) {
+            if ($this->authorizationChecker->isGranted(ContentVoter::LIST, $contentType)) {
+                $contentTypes[] = $contentType;
             }
         }
 
-        // Get content from all collections
+
+        // Get content from all contentTypes
         $contentEntityFields = $this->entityManager->getClassMetadata(Content::class)->getFieldNames();
         $contentQuery = $this->entityManager->getRepository(
             'UnitedCMSCoreBundle:Content'
         )->createQueryBuilder('c')
             ->select('c')
-            ->where('co.collection IN (:collections)')
-            ->setParameter(':collections', $collections)
-            ->leftJoin('c.collections', 'co');
+            ->where('c.contentType IN (:contentTypes)')
+            ->setParameter(':contentTypes', $contentTypes);
 
         // Sorting by nested data attributes is not possible with knp paginator, so we need to do it manually.
         if (!empty($args['sort'])) {
@@ -268,8 +252,6 @@ class QueryType extends AbstractType
 
                 $key = $sort['field'];
                 $order = $sort['order'];
-
-                // TODO: Allow to sort by collection settings
 
                 // if we sort by a content field.
                 if (in_array($key, $contentEntityFields)) {
@@ -302,7 +284,7 @@ class QueryType extends AbstractType
             $this->entityManager->getFilters()->disable('gedmo_softdeleteable');
         }
 
-        // Get all content in one request for all collections.
+        // Get all content in one request for all contentTypes.
         $pagination = $this->paginator->paginate($contentQuery, $args['page'], $args['limit'], ['alias' => $resultType]);
 
         if($args['deleted']) {

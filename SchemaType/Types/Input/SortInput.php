@@ -4,7 +4,6 @@ namespace UnitedCMS\CoreBundle\SchemaType\Types\Input;
 
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\Type;
-use UnitedCMS\CoreBundle\Entity\Collection;
 
 class SortInput extends InputObjectType
 {

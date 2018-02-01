@@ -25,7 +25,7 @@ class ReferenceFieldTypeTest extends FieldTypeTestCase
         $ctField->setSettings(new FieldableFieldSettings([
             'domain' => 'foo',
             'content_type' => 'baa',
-            'collection' => 'foo',
+            'view' => 'foo',
             'content_label' => 'laa',
             'foo' => 'baa'
         ]));
@@ -42,7 +42,7 @@ class ReferenceFieldTypeTest extends FieldTypeTestCase
         $ctField->setSettings(new FieldableFieldSettings([
             'domain' => 'foo',
             'content_type' => 'baa',
-            'collection' => 'foo',
+            'view' => 'foo',
             'content_label' => 'laa',
         ]));
 

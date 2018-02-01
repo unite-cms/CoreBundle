@@ -13,11 +13,10 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\User\UserInterface;
 use UnitedCMS\CoreBundle\Controller\GraphQLApiController;
 use UnitedCMS\CoreBundle\Entity\ApiClient;
-use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
+use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
 use UnitedCMS\CoreBundle\Tests\DatabaseAwareTestCase;
 
@@ -63,7 +62,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           }
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -103,7 +102,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           "settings": {}
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -191,7 +190,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           }
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -229,7 +228,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           "settings": {}
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -295,7 +294,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           }
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -335,7 +334,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           "settings": {}
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -423,7 +422,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           }
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -461,7 +460,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           "settings": {}
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -537,24 +536,18 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
                     $this->em->flush($this->users[$domain->getIdentifier() . '_' . $role]);
                 }
 
-                // For each content type create some collections and test content.
+                // For each content type create some views and test content.
                 foreach($domain->getContentTypes() as $ct) {
 
-                    $other = new Collection();
+                    $other = new View();
                     $other->setTitle('Other')->setIdentifier('other')->setType('table');
-                    $ct->addCollection($other);
+                    $ct->addView($other);
                     $this->em->persist($other);
                     $this->em->flush($other);
 
                     for($i = 0; $i < 60; $i++) {
                         $content = new Content();
                         $content->setContentType($ct);
-
-                        if($i >= 50) {
-                            $cIc = new ContentInCollection();
-                            $cIc->setCollection($other);
-                            $content->addCollection($cIc);
-                        }
 
                         $content_data = [];
 
@@ -571,8 +564,6 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
                     }
 
                     $this->em->refresh($ct);
-                    $this->em->refresh($ct->getCollection('all'));
-                    $this->em->refresh($ct->getCollection('other'));
                 }
 
                 $this->em->refresh($domain);
@@ -651,28 +642,6 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
                 }
             }')
         );
-
-        // Test accessing content from collection
-        $result = $this->api(
-        $this->domains['marketing'],
-        $this->users['marketing_ROLE_PUBLIC'],'query {
-            findNews(collection: "other") {
-                total,
-                result {
-                    collections {
-                        identifier
-                    }
-                }   
-            }
-        }');
-
-        $this->assertEquals(10, $result->data->findNews->total);
-        foreach($result->data->findNews->result as $content) {
-            $this->assertEquals([
-                (object)['identifier' => 'all'],
-                (object)['identifier' => 'other'],
-            ], $content->collections);
-        }
     }
 
     public function testSpecialOperations() {
@@ -708,10 +677,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         $result = $this->api(
         $this->domains['marketing'],
         $this->users['marketing_ROLE_PUBLIC'],'query {
-          find(limit: 20, types: [
-            { type: "news", collection: "other" },
-            { type: "news_category", collection: "all" }
-          ]) {
+          find(limit: 500, types: ["news", "news_category"]) {
             total,
             result {
               id,
@@ -728,7 +694,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
           }
         }');
 
-        // Result should contain 10x news in other collection and 10x news_category
+        // Result should contain 60x news and other 40x news_category
         $count_news = 0;
         $count_category = 0;
 
@@ -741,8 +707,8 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
             }
         }
 
-        $this->assertEquals(10, $count_news);
-        $this->assertEquals(10, $count_category);
+        $this->assertEquals(60, $count_news);
+        $this->assertEquals(40, $count_category);
     }
 
     public function testAPIFiltering() {
@@ -851,20 +817,20 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         $i = 1;
         $reflector = new \ReflectionProperty(Content::class, 'created');
         $reflector->setAccessible(true);
-        foreach($this->domains['marketing']->getContentTypes()->first()->getCollection('all')->getContent() as $c) {
+        foreach($this->domains['marketing']->getContentTypes()->first()->getContent() as $c) {
             $time = new \DateTime();
             $time->add(new \DateInterval('PT'.$i.'S'));
-            $reflector->setValue($c->getContent(), $time);
+            $reflector->setValue($c, $time);
 
             if($i == 1) {
-                $c->getContent()->setData([
+                $c->setData([
                     'title' => 'test_nested_sorting',
                     'content' => 'AAA',
                 ]);
             }
 
             if($i == 2) {
-                $c->getContent()->setData([
+                $c->setData([
                     'title' => 'test_nested_sorting',
                     'content' => 'ZZZ',
                 ]);
@@ -874,7 +840,6 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         }
 
         $this->em->flush();
-        $this->em->refresh($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
         $this->em->refresh($this->domains['marketing']->getContentTypes()->first());
         $this->em->refresh($this->domains['marketing']);
 
@@ -989,8 +954,8 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
 
     public function testAccessReferencedValue() {
 
-        $category = $this->domains['marketing']->getContentTypes()->last()->getCollection('all')->getContent()->get(0)->getContent();
-        $news = $this->domains['marketing']->getContentTypes()->first()->getCollection('all')->getContent()->get(0)->getContent();
+        $category = $this->domains['marketing']->getContentTypes()->last()->getContent()->get(0);
+        $news = $this->domains['marketing']->getContentTypes()->first()->getContent()->get(0);
 
         $news->setData([
             'title' => 'with_category',
@@ -1002,7 +967,6 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         ]);
 
         $this->em->flush();
-        $this->em->refresh($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
         $this->em->refresh($this->domains['marketing']->getContentTypes()->first());
         $this->em->refresh($this->domains['marketing']);
 
@@ -1049,7 +1013,7 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         $this->em->flush();
         $this->em->refresh($this->domains['marketing']->getSettingTypes()->first());
         $this->em->refresh($this->domains['marketing']);
-        $content = $this->domains['marketing']->getContentTypes()->first()->getCollection('all')->getContent()->get(0)->getContent();
+        $content = $this->domains['marketing']->getContentTypes()->first()->getContent()->get(0);
 
         $response = $this->api(
             $this->domains['marketing'],

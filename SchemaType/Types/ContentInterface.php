@@ -5,7 +5,6 @@ namespace UnitedCMS\CoreBundle\SchemaType\Types;
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\Type;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 
 class ContentInterface extends InterfaceType
@@ -27,7 +26,7 @@ class ContentInterface extends InterfaceType
                 'resolveType' => function ($value) use ($schemaTypeManager) {
                     if (!$value instanceof Content) {
                         throw new \InvalidArgumentException(
-                            'Value must be instance of '.ContentInCollection::class.'.'
+                            'Value must be instance of '.Content::class.'.'
                         );
                     }
 

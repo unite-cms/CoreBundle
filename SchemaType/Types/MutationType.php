@@ -10,9 +10,7 @@ use Knp\Component\Pager\Paginator;
 use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Form\FieldableFormBuilder;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
@@ -89,13 +87,6 @@ class MutationType extends AbstractType
 
             $fields['create' . $key] = [
                 'type' => $this->schemaTypeManager->getSchemaType($key . 'Content', $this->unitedCMSManager->getDomain()),
-                'args' => [
-                    'collection' => [
-                        'type' => Type::string(),
-                        'description' => 'Set the collection to get create the content in. Default is "all".',
-                        'defaultValue' => Collection::DEFAULT_COLLECTION_IDENTIFIER,
-                    ],
-                ],
             ];
 
             $fields['update' . $key] = [
@@ -184,16 +175,7 @@ class MutationType extends AbstractType
             throw new UserError("ContentType '$identifier' was not found in domain.");
         }
 
-        if (!$collection = $this->entityManager->getRepository('UnitedCMSCoreBundle:Collection')->findOneBy(
-            [
-                'contentType' => $contentType,
-                'identifier' => $args['collection'],
-            ]
-        )) {
-            throw new UserError("Collection '" . $args['collection'] . "' was not found for given content type.");
-        }
-
-        if (!$this->authorizationChecker->isGranted(ContentVoter::CREATE, $collection)) {
+        if (!$this->authorizationChecker->isGranted(ContentVoter::CREATE, $contentType)) {
             throw new UserError("You are not allowed to create content in content type '$contentType'.");
         }
 
@@ -213,11 +195,6 @@ class MutationType extends AbstractType
             $content
                 ->setContentType($contentType)
                 ->setData($data);
-
-
-            $contentInCollection = new ContentInCollection();
-            $contentInCollection->setCollection($collection);
-            $content->addCollection($contentInCollection);
 
             // If content errors were found, map them to the form.
             $violations = $this->validator->validate($content);

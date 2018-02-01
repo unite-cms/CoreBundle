@@ -1,5 +1,5 @@
 {% extends '@UnitedCMSCore/layout.html.twig' %}
-{% block title %}{{ united.domain }} / {{ collection.contentType }} / Update #{{ content.id }}{% endblock title %}
+{% block title %}{{ united.domain }} / {{ view.contentType }} / Update #{{ content.id }}{% endblock title %}
 {% block navtitle %}{{ include('@UnitedCMSCore/Domain/_navtitle.html.twig') }}{% endblock %}
 {% block navigation %}{{ include('@UnitedCMSCore/Domain/_navigation.domain.html.twig') }}{% endblock navigation %}
 {% block content %}
@@ -26,7 +26,7 @@
                                 'organization': united.domain.organization.identifier,
                                 'domain': united.domain.identifier,
                                 'content_type': contentType.identifier,
-                                'collection': collection.identifier,
+                                'view': view.identifier,
                                 'content': translation.id
                             }) }}" class="uk-button uk-button-default"><span uk-icon="icon: file-edit" class="uk-margin-small-right"></span>Update content</a>
 
@@ -41,7 +41,7 @@
                                                     'organization': united.domain.organization.identifier,
                                                     'domain': united.domain.identifier,
                                                     'content_type': contentType.identifier,
-                                                    'collection': collection.identifier,
+                                                    'view': view.identifier,
                                                     'content': translation.translationOf.id,
                                                     'locale': translation.locale
                                                 }) }}" href="#"><span class="uk-margin-small-right" uk-icon="icon: minus-circle"></span> Remove as translation</a></li>
@@ -64,7 +64,7 @@
                                     'organization': united.domain.organization.identifier,
                                     'domain': united.domain.identifier,
                                     'content_type': contentType.identifier,
-                                    'collection': collection.identifier,
+                                    'view': view.identifier,
                                     'locale': locale,
                                     'translation_of': content.id
                                 }) }}"><span uk-icon="icon: plus" class="uk-margin-small-right"></span> Create Translation</a>
@@ -78,7 +78,7 @@
                                                     'organization': united.domain.organization.identifier,
                                                     'domain': united.domain.identifier,
                                                     'content_type': contentType.identifier,
-                                                    'collection': collection.identifier,
+                                                    'view': view.identifier,
                                                     'content': content.id,
                                                     'locale': locale
                                                 }) }}"><span class="uk-margin-small-right" uk-icon="icon: folder"></span> Add an existing content as translation</a></li>

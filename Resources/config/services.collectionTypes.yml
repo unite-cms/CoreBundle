@@ -1,7 +1,0 @@
-# Contains all core collection types
-services:
-
-  # A simple table collection type that renders all content documents as table rows.
-  UnitedCMS\CoreBundle\Collection\Types\TableCollectionType:
-    tags: [united_cms.collection_type]
-    public: false

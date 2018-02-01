@@ -4,7 +4,7 @@ imports:
   - { resource: services.graphql.yml }
   - { resource: services.security.yml }
   - { resource: services.fieldTypes.yml }
-  - { resource: services.collectionTypes.yml }
+  - { resource: services.viewTypes.yml }
   - { resource: services.validators.yml }
   - { resource: services.doctrineListener.yml }
   - { resource: services.serialization.yml }

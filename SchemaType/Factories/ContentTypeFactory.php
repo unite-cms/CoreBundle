@@ -6,7 +6,6 @@ use Doctrine\ORM\EntityManager;
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Definition\StringType;
 use GraphQL\Type\Definition\Type;
 use UnitedCMS\CoreBundle\Entity\Content;
 use UnitedCMS\CoreBundle\Entity\ContentType;
@@ -151,7 +150,6 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
                         [
                             'id' => Type::id(),
                             'type' => Type::string(),
-                            'collections' => Type::listOf($schemaTypeManager->getSchemaType('CollectionInterface')),
                             'created' => Type::int(),
                             'updated' => Type::int(),
                             'deleted' => Type::int(),
@@ -180,8 +178,6 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
                                 return $value->getUpdated()->getTimestamp();
                             case 'deleted':
                                 return $value->getDeleted() ? $value->getDeleted()->getTimestamp() : null;
-                            Case 'collections':
-                                return $value->getCollections();
                             default:
 
                                 if (!array_key_exists($info->fieldName, $fieldTypes)) {

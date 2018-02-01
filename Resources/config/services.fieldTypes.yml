@@ -30,4 +30,4 @@ services:
   UnitedCMS\CoreBundle\Field\Types\ReferenceFieldType:
     public: false
     tags: [united_cms.field_type]
-    arguments: ['@validator', '@security.authorization_checker', '@united.cms.manager', '@doctrine.orm.entity_manager', '@united.cms.collection_type_manager', '@templating']
+    arguments: ['@validator', '@security.authorization_checker', '@united.cms.manager', '@doctrine.orm.entity_manager', '@united.cms.view_type_manager', '@templating.engine.twig']
