@@ -6,10 +6,8 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 use Symfony\Component\Security\Core\Role\Role;
 use UnitedCMS\CoreBundle\Entity\ApiClient;
-use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\Content;
 use UnitedCMS\CoreBundle\Entity\ContentType;
-use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
 use UnitedCMS\CoreBundle\Entity\User;
 
@@ -36,7 +34,7 @@ class ContentVoter extends Voter
     protected function supports($attribute, $subject)
     {
         if (in_array($attribute, self::BUNDLE_PERMISSIONS)) {
-            return ($subject instanceof Collection);
+            return ($subject instanceof ContentType);
         }
 
         if (in_array($attribute, self::ENTITY_PERMISSIONS)) {
@@ -64,13 +62,22 @@ class ContentVoter extends Voter
         }
 
         // This voter can decide on a Content subject for APIClients of the same domain.
-        if ($token->getUser() instanceof ApiClient && ($subject instanceof Content || $subject instanceof Collection)) {
+        if ($token->getUser() instanceof ApiClient && $subject instanceof Content) {
 
             if($subject->getContentType()->getDomain() !== $token->getUser()->getDomain()) {
                 return self::ACCESS_ABSTAIN;
             }
 
             return $this->checkPermission($attribute, $subject->getContentType(), $token->getRoles());
+        }
+
+        if ($token->getUser() instanceof ApiClient && $subject instanceof ContentType) {
+
+            if($subject->getDomain() !== $token->getUser()->getDomain()) {
+                return self::ACCESS_ABSTAIN;
+            }
+
+            return $this->checkPermission($attribute, $subject, $token->getRoles());
         }
 
         // If the token is not an ApiClient it must be an User.
@@ -87,15 +94,23 @@ class ContentVoter extends Voter
         foreach ($token->getUser()->getOrganizations() as $organizationMember) {
             if (in_array(Organization::ROLE_ADMINISTRATOR, $organizationMember->getRoles())) {
 
-                if (($subject instanceof Collection || $subject instanceof Content) && $subject->getContentType()->getDomain()->getOrganization(
+                if ($subject instanceof ContentType && $subject->getDomain()->getOrganization(
+                    )->getId() === $organizationMember->getOrganization()->getId()) {
+                    return self::ACCESS_GRANTED;
+                }
+
+                if ($subject instanceof Content && $subject->getContentType()->getDomain()->getOrganization(
                     )->getId() === $organizationMember->getOrganization()->getId()) {
                     return self::ACCESS_GRANTED;
                 }
             }
         }
 
-        // Check bundle and entity actions on Collection or Content objects.
-        if ($subject instanceof Collection || $subject instanceof Content) {
+        // Check bundle and entity actions on ContentType or Content objects.
+        if ($subject instanceof ContentType) {
+            return $this->checkPermission($attribute, $subject, $token->getUser()->getDomainRoles($subject->getDomain()));
+        }
+        if ($subject instanceof Content) {
             return $this->checkPermission($attribute, $subject->getContentType(), $token->getUser()->getDomainRoles($subject->getContentType()->getDomain()));
         }
 

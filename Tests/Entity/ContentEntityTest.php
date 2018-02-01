@@ -3,9 +3,7 @@
 namespace UnitedCMS\CoreBundle\Tests\Entity;
 
 use Symfony\Component\Validator\ConstraintViolation;
-use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\ContentTypeField;
 use UnitedCMS\CoreBundle\Field\FieldType;
@@ -17,33 +15,13 @@ class ContentEntityTest extends DatabaseAwareTestCase
     public function testValidateContent()
     {
 
-        // Try to validate empty Collection.
+        // Try to validate empty content.
         $content = new Content();
-        $errors = $this->container->get('validator')->validate($content);
-        $this->assertCount(2, $errors);
-
-        $this->assertEquals('contentType', $errors->get(0)->getPropertyPath());
-        $this->assertEquals('validation.not_blank', $errors->get(0)->getMessage());
-
-        $this->assertEquals('collections', $errors->get(1)->getPropertyPath());
-        $this->assertEquals('validation.missing_default_collection', $errors->get(1)->getMessage());
-
-        // Try to validate a Collection that is not part of the same contentType
-        $ct1 = new ContentType();
-        $ct2 = new ContentType();
-        $content->setContentType($ct1);
-        $cInC = new ContentInCollection();
-        $other_collection = new Collection();
-        $other_collection->setTitle('Other Collection')->setIdentifier('other')->setType('table');
-        $ct2->addCollection($other_collection);
-        $cInC->setCollection($other_collection);
-        $content->addCollection($cInC);
-
         $errors = $this->container->get('validator')->validate($content);
         $this->assertCount(1, $errors);
 
-        $this->assertStringStartsWith('collections', $errors->get(0)->getPropertyPath());
-        $this->assertEquals('validation.invalid_collection_content_type', $errors->get(0)->getMessage());
+        $this->assertEquals('contentType', $errors->get(0)->getPropertyPath());
+        $this->assertEquals('validation.not_blank', $errors->get(0)->getMessage());
     }
 
     public function testValidateAdditionalContentData()

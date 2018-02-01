@@ -1,6 +1,6 @@
 <?php
 
-namespace UnitedCMS\CoreBundle\Tests\Collection;
+namespace UnitedCMS\CoreBundle\Tests\View;
 
 use PHPUnit\Framework\TestCase;
 use UnitedCMS\CoreBundle\Field\FieldType;

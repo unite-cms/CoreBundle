@@ -6,7 +6,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation\ExclusionPolicy;
 use JMS\Serializer\Annotation\Expose;
-use UnitedCMS\CoreBundle\Collection\Types\TableCollectionType;
+use UnitedCMS\CoreBundle\View\Types\TableViewType;
 use JMS\Serializer\Annotation\Type;
 use JMS\Serializer\Annotation\Accessor;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
@@ -14,7 +14,7 @@ use UnitedCMS\CoreBundle\Security\ContentVoter;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-use UnitedCMS\CoreBundle\Validator\Constraints\DefaultCollectionType;
+use UnitedCMS\CoreBundle\Validator\Constraints\DefaultViewType;
 use UnitedCMS\CoreBundle\Validator\Constraints\ReservedWords;
 use UnitedCMS\CoreBundle\Validator\Constraints\ValidPermissions;
 
@@ -93,16 +93,16 @@ class ContentType implements Fieldable
     private $fields;
 
     /**
-     * @var Collection[]
+     * @var View[]
      *
-     * @Type("ArrayCollection<UnitedCMS\CoreBundle\Entity\Collection>")
+     * @Type("ArrayCollection<UnitedCMS\CoreBundle\Entity\View>")
      * @Assert\Valid()
-     * @DefaultCollectionType(message="validation.missing_default_collection")
-     * @Accessor(getter="getCollections",setter="setCollections")
-     * @ORM\OneToMany(targetEntity="UnitedCMS\CoreBundle\Entity\Collection", mappedBy="contentType", cascade={"persist", "remove", "merge"}, indexBy="identifier", orphanRemoval=true)
+     * @DefaultViewType(message="validation.missing_default_view")
+     * @Accessor(getter="getViews",setter="setViews")
+     * @ORM\OneToMany(targetEntity="UnitedCMS\CoreBundle\Entity\View", mappedBy="contentType", cascade={"persist", "remove", "merge"}, indexBy="identifier", orphanRemoval=true)
      * @Expose
      */
-    private $collections;
+    private $views;
 
     /**
      * @var array
@@ -146,9 +146,9 @@ class ContentType implements Fieldable
     public function __construct()
     {
         $this->fields = new ArrayCollection();
-        $this->collections = new ArrayCollection();
+        $this->views = new ArrayCollection();
         $this->locales = [];
-        $this->addDefaultCollection();
+        $this->addDefaultView();
         $this->addDefaultPermissions();
     }
 
@@ -158,16 +158,16 @@ class ContentType implements Fieldable
     }
 
     /**
-     * Each ContentType must have a "all" collection. This function adds it to the ArrayCollection.
+     * Each ContentType must have a "all" view. This function adds it to the ArrayCollection.
      */
-    private function addDefaultCollection()
+    private function addDefaultView()
     {
-        $defaultCollection = new Collection();
-        $defaultCollection
-            ->setType(TableCollectionType::getType())
+        $defaultView = new View();
+        $defaultView
+            ->setType(TableViewType::getType())
             ->setTitle('All')
-            ->setIdentifier(Collection::DEFAULT_COLLECTION_IDENTIFIER);
-        $this->addCollection($defaultCollection);
+            ->setIdentifier(View::DEFAULT_VIEW_IDENTIFIER);
+        $this->addView($defaultView);
     }
 
     private function addDefaultPermissions()
@@ -195,7 +195,7 @@ class ContentType implements Fieldable
 
     /**
      * This function sets all structure fields from the given entity and calls setFromEntity for all updated
-     * collections and fields.
+     * views and fields.
      *
      * @param ContentType $contentType
      * @return ContentType
@@ -226,28 +226,28 @@ class ContentType implements Fieldable
             $this->getFields()->get($field)->setFromEntity($contentType->getFields()->get($field));
         }
 
-        // Collections to delete
+        // Views to delete
         foreach (array_diff(
-                     $this->getCollections()->getKeys(),
-                     $contentType->getCollections()->getKeys()
-                 ) as $collection) {
-            $this->getCollections()->remove($collection);
+                     $this->getViews()->getKeys(),
+                     $contentType->getViews()->getKeys()
+                 ) as $view) {
+            $this->getViews()->remove($view);
         }
 
-        // Collections to add
+        // Views to add
         foreach (array_diff(
-                     $contentType->getCollections()->getKeys(),
-                     $this->getCollections()->getKeys()
-                 ) as $collection) {
-            $this->addCollection($contentType->getCollections()->get($collection));
+                     $contentType->getViews()->getKeys(),
+                     $this->getViews()->getKeys()
+                 ) as $view) {
+            $this->addView($contentType->getViews()->get($view));
         }
 
-        // Collections to update
+        // Views to update
         foreach (array_intersect(
-                     $contentType->getCollections()->getKeys(),
-                     $this->getCollections()->getKeys()
-                 ) as $collection) {
-            $this->getCollections()->get($collection)->setFromEntity($contentType->getCollections()->get($collection));
+                     $contentType->getViews()->getKeys(),
+                     $this->getViews()->getKeys()
+                 ) as $view) {
+            $this->getViews()->get($view)->setFromEntity($contentType->getViews()->get($view));
         }
 
         return $this;
@@ -438,66 +438,66 @@ class ContentType implements Fieldable
     }
 
     /**
-     * @return Collection[]|ArrayCollection
+     * @return View[]|ArrayCollection
      */
-    public function getCollections()
+    public function getViews()
     {
-        return $this->collections;
+        return $this->views;
     }
 
     /**
      * @param $key
-     * @return Collection
+     * @return View
      */
-    public function getCollection($key)
+    public function getView($key)
     {
-        foreach ($this->getCollections() as $collection) {
-            if ($collection->getIdentifier() === $key) {
-                return $collection;
+        foreach ($this->getViews() as $view) {
+            if ($view->getIdentifier() === $key) {
+                return $view;
             }
         }
 
-        throw new \InvalidArgumentException("Collection with key '$key' was not found.");
+        throw new \InvalidArgumentException("View with key '$key' was not found.");
     }
 
     /**
-     * @param Collection[]|ArrayCollection $collections
+     * @param View[]|ArrayCollection $views
      *
      * @return ContentType
      */
-    public function setCollections($collections)
+    public function setViews($views)
     {
-        $this->collections->clear();
+        $this->views->clear();
 
         $includes_all = false;
 
-        foreach ($collections as $collection) {
-            if ($collection->getIdentifier() == 'all') {
+        foreach ($views as $view) {
+            if ($view->getIdentifier() == 'all') {
                 $includes_all = true;
             }
         }
 
         if (!$includes_all) {
-            $this->addDefaultCollection();
+            $this->addDefaultView();
         }
 
-        foreach ($collections as $collection) {
-            $this->addCollection($collection);
+        foreach ($views as $view) {
+            $this->addView($view);
         }
 
         return $this;
     }
 
     /**
-     * @param Collection $collection
+     * @param View $view
      *
      * @return ContentType
      */
-    public function addCollection(Collection $collection)
+    public function addView(View $view)
     {
-        if (!$this->collections->containsKey($collection->getIdentifier())) {
-            $this->collections->set($collection->getIdentifier(), $collection);
-            $collection->setContentType($this);
+        if (!$this->views->containsKey($view->getIdentifier())) {
+            $this->views->set($view->getIdentifier(), $view);
+            $view->setContentType($this);
         }
 
         return $this;
@@ -570,6 +570,14 @@ class ContentType implements Fieldable
         $this->weight = $weight;
 
         return $this;
+    }
+
+    /**
+     * @return ArrayCollection|Content[]
+     */
+    public function getContent()
+    {
+        return $this->content;
     }
 }
 

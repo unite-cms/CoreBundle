@@ -46,21 +46,21 @@
                     organization: united.organization.identifier,
                     domain: united.domain.identifier,
                     content_type: type.identifier,
-                    collection: 'all'
+                    view: 'all'
                 }) }}"><span class="uk-margin-small-right"
                              uk-icon="icon: {{ type.icon ? type.icon : 'album' }}"></span> {{ type }}</a>
 
-                {% if type.collections|length > 1 %}
+                {% if type.views|length > 1 %}
                     <ul class="uk-nav-sub">
-                        {% for collection in type.collections %}
-                        {% if collection.identifier != "all" %}
+                        {% for view in type.views %}
+                        {% if view.identifier != "all" %}
                         <li><a href="{{ path('unitedcms_core_content_index', {
                                 organization: united.organization.identifier,
                                 domain: united.domain.identifier,
                                 content_type: type.identifier,
-                                collection: collection.identifier
+                                view: view.identifier
                             }) }}"><span class="uk-margin-small-right"
-                                         uk-icon="icon: {{ collection.icon ? collection.icon : 'chevron-right' }}"></span> {{ collection }}
+                                         uk-icon="icon: {{ view.icon ? view.icon : 'chevron-right' }}"></span> {{ view }}
                             </a>
                             {% endif %}
                             {% endfor %}

@@ -3,7 +3,6 @@
 namespace UnitedCMS\CoreBundle\Command;
 
 use Doctrine\ORM\EntityManager;
-use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Console\Input\InputInterface;
@@ -12,7 +11,6 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 
-use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
 use UnitedCMS\CoreBundle\Service\DomainDefinitionParser;
 
@@ -94,14 +92,14 @@ class CreateDomainCommand extends Command
         foreach ($domain->getContentTypes() as $contentType) {
 
             $fields = [];
-            $collections = [];
+            $views = [];
 
             foreach ($contentType->getFields() as $field) {
                 $fields[] = $field->getTitle();
             }
 
-            foreach ($contentType->getCollections() as $collection) {
-                $collections[] = $collection->getTitle();
+            foreach ($contentType->getViews() as $view) {
+                $views[] = $view->getTitle();
             }
 
             $output->writeln('    {');
@@ -110,7 +108,7 @@ class CreateDomainCommand extends Command
             $output->writeln('      Icon: <comment>'.$contentType->getIcon().'</comment>');
             $output->writeln('      Description: <comment>'.$contentType->getDescription().'</comment>');
             $output->writeln('      Fields: [<comment>'.join(', ', $fields).'</comment>]');
-            $output->writeln('      Collections: [<comment>'.join(', ', $collections).'</comment>]');
+            $output->writeln('      Views: [<comment>'.join(', ', $views).'</comment>]');
             $output->writeln('    }');
         }
 

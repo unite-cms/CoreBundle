@@ -5,7 +5,7 @@ services:
     tags:
       - { name: jms_serializer.handler, type: 'UnitedCMS\CoreBundle\Field\FieldableFieldSettings', format: 'json', method: 'handle' }
 
-  UnitedCMS\CoreBundle\Collection\CollectionSettingsSerializationHandler:
+  UnitedCMS\CoreBundle\View\ViewSettingsSerializationHandler:
     public: false
     tags:
-      - { name: jms_serializer.handler, type: 'UnitedCMS\CoreBundle\Collection\CollectionSettings', format: 'json', method: 'handle' }
+      - { name: jms_serializer.handler, type: 'UnitedCMS\CoreBundle\View\ViewSettings', format: 'json', method: 'handle' }
