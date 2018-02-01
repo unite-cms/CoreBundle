@@ -176,7 +176,7 @@ class ControllerAccessCheckTest extends DatabaseAwareTestCase
         $this->em->refresh($this->apiClient1);
     }
 
-    private function assertAccess($route, $canAccess, $substitutions = [], $methods = ['GET'])
+    private function assertAccess($route, $canAccess, $substitutions = [], $methods = ['GET'], $parameters = [])
     {
 
         $route = 'http://localhost'.$route;
@@ -186,7 +186,7 @@ class ControllerAccessCheckTest extends DatabaseAwareTestCase
         }
 
         foreach ($methods as $method) {
-            $this->client->request($method, $route);
+            $this->client->request($method, $route, $parameters);
 
             if ($canAccess) {
 
@@ -265,7 +265,10 @@ class ControllerAccessCheckTest extends DatabaseAwareTestCase
         ];
 
         $this->assertAccess('/', false, $substitutions);
-        $this->assertAccess('/login', true, $substitutions, ['GET', 'POST']);
+        $this->assertAccess('/login', true, $substitutions, ['GET', 'POST'], [
+            '_username' => '',
+            '_password' => '',
+        ]);
         $this->assertAccess('/profile/reset-password', true, $substitutions, ['GET', 'POST']);
         $this->assertAccess('/profile/reset-password-confirm', true, $substitutions, ['GET', 'POST']);
         $this->assertAccess('/profile/accept-invitation', true, $substitutions, ['GET', 'POST']);
