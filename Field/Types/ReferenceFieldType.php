@@ -135,6 +135,11 @@ class ReferenceFieldType extends FieldType
         return $schemaTypeManager->getSchemaType($name, $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 
+    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
+    {
+        return $schemaTypeManager->getSchemaType('ReferenceFieldTypeInput', $this->unitedCMSManager->getDomain(), $nestingLevel);
+    }
+
     function resolveGraphQLData($value)
     {
         if(empty($value)) {
@@ -185,13 +190,29 @@ class ReferenceFieldType extends FieldType
 
         if(empty($data['domain']) || empty($data['content_type']) || empty($data['content'])) {
             $violations[] = new ConstraintViolation(
-                'validation.wrong_definition',
-                'validation.wrong_definition',
+                'validation.missing_definition',
+                'validation.missing_definition',
                 [],
                 null,
                 '[' . $this->getIdentifier() . ']',
                 $data
             );
+        }
+
+        // Try to resolve the data to check if the current user is allowed to access it.
+        else {
+            try {
+                $this->resolveGraphQLData($data);
+            } catch (InvalidArgumentException $e) {
+                $violations[] = new ConstraintViolation(
+                    'validation.wrong_definition',
+                    'validation.wrong_definition',
+                    [],
+                    null,
+                    '[' . $this->getIdentifier() . ']',
+                    $data
+                );
+            }
         }
 
         return $violations;

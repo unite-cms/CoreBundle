@@ -3,9 +3,6 @@
 namespace UnitedCMS\CoreBundle\Tests\Entity;
 
 use Symfony\Component\Validator\ConstraintViolation;
-use UnitedCMS\CoreBundle\Entity\Collection;
-use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\ContentTypeField;

@@ -3,13 +3,17 @@
 namespace UnitedCMS\CoreBundle\SchemaType\Types;
 
 use Doctrine\ORM\EntityManager;
+use GraphQL\Error\UserError;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Knp\Component\Pager\Pagination\AbstractPagination;
 use Knp\Component\Pager\Paginator;
+use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use UnitedCMS\CoreBundle\Entity\Content;
 use UnitedCMS\CoreBundle\Entity\Setting;
+use UnitedCMS\CoreBundle\Form\FieldableFormBuilder;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
 use UnitedCMS\CoreBundle\Security\SettingVoter;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
@@ -165,17 +169,26 @@ class QueryType extends AbstractType
      * @param ResolveInfo $info
      *
      * @return mixed
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
     protected function resolveField($value, array $args, $context, ResolveInfo $info)
     {
         // Resolve single content type.
         if(substr($info->fieldName, 0, 3) == 'get') {
-            return $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->find($args['id']);
+
+            $id = $args['id'];
+            $content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->find($id);
+
+            if ($content && !$this->authorizationChecker->isGranted(ContentVoter::VIEW, $content)) {
+                throw new UserError("You are not allowed to view content with id '$id'.");
+            }
+
+            return $content;
         }
 
         // Resolve single setting type.
         elseif (substr($info->fieldName, -strlen('Setting')) === 'Setting') {
-            return $this->resolveSetting(strtolower(substr($info->fieldName, 0, strlen('Setting'))), $value, $args, $context, $info);
+            return $this->resolveSetting(strtolower(substr($info->fieldName, 0, -strlen('Setting'))), $value, $args, $context, $info);
         }
 
         // Resolve list content type.
@@ -202,6 +215,7 @@ class QueryType extends AbstractType
      * @param \GraphQL\Type\Definition\ResolveInfo $info
      *
      * @return mixed
+     * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
     private function resolveContent($resultType, $value, array $args, $context, ResolveInfo $info) : AbstractPagination
     {
@@ -301,7 +315,7 @@ class QueryType extends AbstractType
                 'identifier' => $identifier,
             ]
         )) {
-            throw new \InvalidArgumentException("SettingType '$identifier' was not found in domain.");
+            throw new UserError("SettingType '$identifier' was not found in domain.");
         }
 
 
@@ -311,9 +325,7 @@ class QueryType extends AbstractType
         $setting = $settingType->getSetting();
 
         if (!$this->authorizationChecker->isGranted(SettingVoter::VIEW, $setting)) {
-            throw new \InvalidArgumentException(
-                "You are not allowed to view setting of type '$identifier'."
-            );
+            throw new UserError("You are not allowed to view setting of type '$identifier'.");
         }
 
         // Create setting schema type for current domain.

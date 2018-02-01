@@ -326,6 +326,24 @@ class ContentControllerTest extends DatabaseAwareTestCase {
 
         // Should stay on the same page.
         $this->assertFalse($this->client->getResponse()->isRedirection());
+        $this->assertCount(1, $crawler->filter('#fieldable_form_f3 + .uk-alert-danger p:contains("validation.missing_definition")'));
+
+        // Assert add form
+        $form = $crawler->filter('form');
+        $this->assertCount(1, $form);
+
+        // Submit invalid form data.
+        $form = $form->form();
+        $values = $form->getPhpValues();
+        $values['fieldable_form']['f3'] = [
+            'domain' => 'foo',
+            'content_type' => 'baa',
+            'content' => 'any',
+        ];
+        $crawler = $this->client->request($form->getMethod(), $form->getUri(), $values, $form->getPhpFiles());
+
+        // Should stay on the same page.
+        $this->assertFalse($this->client->getResponse()->isRedirection());
         $this->assertCount(1, $crawler->filter('#fieldable_form_f3 + .uk-alert-danger p:contains("validation.wrong_definition")'));
 
         // On Update.
@@ -347,6 +365,24 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         $values = $form->getPhpValues();
         $values['fieldable_form']['f3'] = [
             'content' => 'any'
+        ];
+        $crawler = $this->client->request($form->getMethod(), $form->getUri(), $values, $form->getPhpFiles());
+
+        // Should stay on the same page.
+        $this->assertFalse($this->client->getResponse()->isRedirection());
+        $this->assertCount(1, $crawler->filter('#fieldable_form_f3 + .uk-alert-danger p:contains("validation.missing_definition")'));
+
+        // Assert add form
+        $form = $crawler->filter('form');
+        $this->assertCount(1, $form);
+
+        // Submit invalid form data.
+        $form = $form->form();
+        $values = $form->getPhpValues();
+        $values['fieldable_form']['f3'] = [
+            'domain' => 'foo',
+            'content_type' => 'baa',
+            'content' => 'any',
         ];
         $crawler = $this->client->request($form->getMethod(), $form->getUri(), $values, $form->getPhpFiles());
 
