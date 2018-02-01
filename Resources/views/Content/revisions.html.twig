@@ -1,5 +1,5 @@
 {% extends '@UnitedCMSCore/layout.html.twig' %}
-{% block title %}{{ united.domain }} / {{ collection.contentType }} / Update #{{ content.id }}{% endblock title %}
+{% block title %}{{ united.domain }} / {{ view.contentType }} / Update #{{ content.id }}{% endblock title %}
 {% block navtitle %}{{ include('@UnitedCMSCore/Domain/_navtitle.html.twig') }}{% endblock %}
 {% block navigation %}{{ include('@UnitedCMSCore/Domain/_navigation.domain.html.twig') }}{% endblock navigation %}
 {% block content %}
@@ -37,7 +37,7 @@
                                         'organization': united.domain.organization.identifier,
                                         'domain': united.domain.identifier,
                                         'content_type': contentType.identifier,
-                                        'collection': collection.identifier,
+                                        'view': view.identifier,
                                         'content': content.id,
                                         'version': revision.version
                                     }) }}" class="uk-button uk-button-default"><span uk-icon="icon: history" class="uk-margin-small-right"></span>Revert to version {{ revision.version }}</a>

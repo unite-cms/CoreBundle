@@ -55,7 +55,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             { "title": "Field 2", "identifier": "f2", "type": "choice", "settings": { "choices": ["a", "b"] } },
             { "title": "Field 3", "identifier": "f3", "type": "reference", "settings": { "domain": "d1", "content_type": "ct1" } }
         ], 
-        "collections": [
+        "views": [
             { "title": "All", "identifier": "all", "type": "table" },
             { "title": "Other", "identifier": "other", "type": "table" }
         ],
@@ -121,7 +121,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'other',
+            'view' => 'other',
         ]);
 
         $this->client->request('GET', $url_other_list);
@@ -131,7 +131,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
         ]);
 
         $crawler = $this->client->request('GET', $url_list);
@@ -176,7 +176,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
         // Assert creation message.
         $this->assertCount(1, $crawler->filter('.uk-alert-success:contains("Content created.")'));
 
-        // Since the collection list is rendered in js, we can't check creation via DOM. But we can see, if we can edit
+        // Since the view list is rendered in js, we can't check creation via DOM. But we can see, if we can edit
         // the content.
         $content = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([ 'contentType' => $this->domain->getContentTypes()->first(), ], [ 'created' => 'DESC', ]);
         $this->assertNotNull($content);
@@ -189,7 +189,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $doctrineUUIDGenerator->generate($this->em, $content),
         ]));
 
@@ -200,7 +200,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId()
         ]));
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
@@ -248,7 +248,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $doctrineUUIDGenerator->generate($this->em, $content),
         ]));
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
@@ -258,7 +258,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId()
         ]));
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
@@ -308,7 +308,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
         ]));
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
 
@@ -333,7 +333,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
@@ -370,7 +370,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $doctrineUUIDGenerator->generate($this->em, $content),
         ]));
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
@@ -380,7 +380,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
@@ -406,7 +406,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(403, $this->client->getResponse()->getStatusCode());
@@ -419,7 +419,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
@@ -447,7 +447,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
         ])));
         $crawler = $this->client->followRedirect();
 
@@ -477,7 +477,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $doctrineUUIDGenerator->generate($this->em, $content),
         ]));
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
@@ -487,7 +487,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(404, $this->client->getResponse()->getStatusCode());
@@ -513,7 +513,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(403, $this->client->getResponse()->getStatusCode());
@@ -526,7 +526,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
@@ -554,7 +554,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
         ])));
         $crawler = $this->client->followRedirect();
 
@@ -578,7 +578,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $doctrineUUIDGenerator->generate($this->em, $content),
         ]));
 
@@ -589,7 +589,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
 
@@ -617,7 +617,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
         ])));
         $crawler = $this->client->followRedirect();
 
@@ -642,7 +642,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]));
 
@@ -661,14 +661,14 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $translated_content->getId(),
         ]));
         $this->assertTrue($this->client->getResponse()->isRedirect($this->container->get('router')->generate('unitedcms_core_content_index', [
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
         ])));
         $crawler = $this->client->followRedirect();
 
@@ -688,7 +688,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $translated_content->getId(),
         ]));
 
@@ -718,7 +718,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ])));
         $crawler = $this->client->followRedirect();
@@ -766,7 +766,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ])));
         $crawler = $this->client->followRedirect();
@@ -794,7 +794,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $content->getId(),
         ]);
 
@@ -804,7 +804,7 @@ class ContentControllerTest extends DatabaseAwareTestCase {
             'organization' => $this->organization->getIdentifier(),
             'domain' => $this->domain->getIdentifier(),
             'content_type' => $this->domain->getContentTypes()->first()->getIdentifier(),
-            'collection' => 'all',
+            'view' => 'all',
             'content' => $doctrineUUIDGenerator->generate($this->em, $content),
         ]));
 

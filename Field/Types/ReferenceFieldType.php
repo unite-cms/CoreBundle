@@ -3,17 +3,15 @@
 namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Doctrine\ORM\EntityManager;
-use GraphQL\Type\Definition\Type;
 use Symfony\Bridge\Twig\TwigEngine;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\InvalidArgumentException;
-use Symfony\Component\Form\Exception\TransformationFailedException;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use UnitedCMS\CoreBundle\Collection\CollectionTypeInterface;
-use UnitedCMS\CoreBundle\Collection\CollectionTypeManager;
-use UnitedCMS\CoreBundle\Entity\Collection;
+use UnitedCMS\CoreBundle\View\ViewTypeInterface;
+use UnitedCMS\CoreBundle\View\ViewTypeManager;
+use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Field\FieldType;
@@ -27,22 +25,22 @@ class ReferenceFieldType extends FieldType
 {
     const TYPE                      = "reference";
     const FORM_TYPE                 = WebComponentType::class;
-    const SETTINGS                  = ['domain', 'content_type', 'collection', 'content_label'];
+    const SETTINGS                  = ['domain', 'content_type', 'view', 'content_label'];
     const REQUIRED_SETTINGS         = ['domain', 'content_type'];
 
     private $validator;
     private $authorizationChecker;
     private $unitedCMSManager;
-    private $collectionTypeManager;
+    private $viewTypeManager;
     private $entityManager;
     private $templating;
 
-    function __construct(ValidatorInterface $validator, AuthorizationChecker $authorizationChecker, UnitedCMSManager $unitedCMSManager, EntityManager $entityManager, CollectionTypeManager $collectionTypeManager, TwigEngine $templating)
+    function __construct(ValidatorInterface $validator, AuthorizationChecker $authorizationChecker, UnitedCMSManager $unitedCMSManager, EntityManager $entityManager, ViewTypeManager $viewTypeManager, TwigEngine $templating)
     {
         $this->validator = $validator;
         $this->authorizationChecker = $authorizationChecker;
         $this->unitedCMSManager = $unitedCMSManager;
-        $this->collectionTypeManager = $collectionTypeManager;
+        $this->viewTypeManager = $viewTypeManager;
         $this->entityManager = $entityManager;
         $this->templating = $templating;
     }
@@ -50,7 +48,7 @@ class ReferenceFieldType extends FieldType
     function getFormOptions(): array
     {
         $settings = $this->field->getSettings();
-        $settings->collection = $settings->collection ?? 'all';
+        $settings->view = $settings->view ?? 'all';
 
         $organization = $this->unitedCMSManager->getOrganization();
 
@@ -70,20 +68,20 @@ class ReferenceFieldType extends FieldType
             throw new InvalidArgumentException("No content_Type with identifier '{$settings->content_type}' was found for this organization and domain.");
         }
 
-        $collection = $contentType->getCollections()->filter(function( Collection $collection) use($settings) { return $collection->getIdentifier() == $settings->collection; })->first();
-
-        if(!$this->authorizationChecker->isGranted(ContentVoter::LIST, $collection)) {
+        if(!$this->authorizationChecker->isGranted(ContentVoter::LIST, $contentType)) {
             throw new InvalidArgumentException("You are not allowed to view this content_type.");
         }
 
-        if(!$collection) {
-            throw new InvalidArgumentException("No collection with identifier '{$settings->collection}' was found for this organization, domain and content type.");
+        $view = $contentType->getViews()->filter(function( View $view) use($settings) { return $view->getIdentifier() == $settings->view; })->first();
+
+        if(!$view) {
+            throw new InvalidArgumentException("No view with identifier '{$settings->view}' was found for this organization, domain and content type.");
         }
 
-        // Reload the full collection object
-        $collection = $this->entityManager->getRepository('UnitedCMSCoreBundle:Collection')->findOneBy([
+        // Reload the full view object
+        $view = $this->entityManager->getRepository('UnitedCMSCoreBundle:View')->findOneBy([
             'contentType' => $contentType,
-            'id' => $collection->getId(),
+            'id' => $view->getId(),
         ]);
 
         $settings->content_label = $settings->content_label ?? ucfirst($contentType->getTitle()) . '# {id}';
@@ -98,10 +96,10 @@ class ReferenceFieldType extends FieldType
                 'base-url' => '/' . $this->unitedCMSManager->getOrganization() . '/',
                 'content-label' => $settings->content_label,
                 'modal-html' => $this->templating->render(
-                    $this->collectionTypeManager->getCollectionType($collection->getType())::getTemplate(),
+                    $this->viewTypeManager->getViewType($view->getType())::getTemplate(),
                     [
-                        'collection' => $collection,
-                        'parameters' => $this->collectionTypeManager->getTemplateRenderParameters($collection, CollectionTypeInterface::SELECT_MODE_SINGLE),
+                        'view' => $view,
+                        'parameters' => $this->viewTypeManager->getTemplateRenderParameters($view, ViewTypeInterface::SELECT_MODE_SINGLE),
                     ]
                 ),
             ],
@@ -133,7 +131,7 @@ class ReferenceFieldType extends FieldType
             $name .= 'Level' . $nestingLevel;
         }
 
-        // We use the default content in collection factory to build the type.
+        // We use the default content in view factory to build the type.
         return $schemaTypeManager->getSchemaType($name, $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 

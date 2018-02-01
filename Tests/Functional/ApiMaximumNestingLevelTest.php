@@ -14,7 +14,6 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use UnitedCMS\CoreBundle\Controller\GraphQLApiController;
 use UnitedCMS\CoreBundle\Entity\ApiClient;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
@@ -62,7 +61,7 @@ class ApiMaximumNestingLevelTest extends DatabaseAwareTestCase
           }
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -111,7 +110,7 @@ class ApiMaximumNestingLevelTest extends DatabaseAwareTestCase
           }
         }
       ],
-      "collections": [
+      "views": [
         {
           "title": "All",
           "identifier": "all",
@@ -258,20 +257,13 @@ class ApiMaximumNestingLevelTest extends DatabaseAwareTestCase
     public function testReachingMaximumNestingLevel() {
 
         $news = new Content();
-        $newsInCollection = new ContentInCollection();
         $category = new Content();
-        $categoryInCollection = new ContentInCollection();
-
         $news->setContentType($this->domains['marketing']->getContentTypes()->first());
-        $newsInCollection->setCollection($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
-
         $category->setContentType($this->domains['marketing']->getContentTypes()->last());
-        $categoryInCollection->setCollection($this->domains['marketing']->getContentTypes()->last()->getCollection('all'));
 
         $this->em->persist($news);
         $this->em->persist($category);
         $this->em->flush();
-        $this->em->refresh($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
         $this->em->refresh($this->domains['marketing']->getContentTypes()->first());
         $this->em->refresh($this->domains['marketing']);
 
@@ -279,9 +271,7 @@ class ApiMaximumNestingLevelTest extends DatabaseAwareTestCase
         $category->setData(['news' => ['domain' => $this->domains['marketing']->getIdentifier(), 'content_type' => 'news', 'content' => $news->getId()]]);
 
         $this->em->flush();
-        $this->em->refresh($this->domains['marketing']->getContentTypes()->first()->getCollection('all'));
         $this->em->refresh($this->domains['marketing']->getContentTypes()->first());
-        $this->em->refresh($this->domains['marketing']->getContentTypes()->last()->getCollection('all'));
         $this->em->refresh($this->domains['marketing']->getContentTypes()->last());
         $this->em->refresh($this->domains['marketing']);
 

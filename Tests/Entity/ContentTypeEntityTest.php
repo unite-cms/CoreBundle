@@ -2,10 +2,10 @@
 
 namespace UnitedCMS\CoreBundle\Tests\Entity;
 
-use UnitedCMS\CoreBundle\Entity\Collection;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
+use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Tests\DatabaseAwareTestCase;
 
 class ContentTypeEntityTest extends DatabaseAwareTestCase
@@ -115,18 +115,18 @@ class ContentTypeEntityTest extends DatabaseAwareTestCase
         $this->assertEquals('permissions', $errors->get(0)->getPropertyPath());
         $this->assertEquals('validation.invalid_selection', $errors->get(0)->getMessage());
 
-        // Test invalid collection.
-        $contentType->setPermissions([])->addCollection(new Collection());
+        // Test invalid view.
+        $contentType->setPermissions([])->addView(new View());
         $errors = $this->container->get('validator')->validate($contentType);
         $this->assertGreaterThanOrEqual(1, $errors->count());
-        $this->assertStringStartsWith('collections', $errors->get(0)->getPropertyPath());
+        $this->assertStringStartsWith('views', $errors->get(0)->getPropertyPath());
 
-        // Test ContentType without all collection.
-        $contentType->getCollections()->clear();
+        // Test ContentType without all view.
+        $contentType->getViews()->clear();
         $errors = $this->container->get('validator')->validate($contentType);
         $this->assertCount(1, $errors);
-        $this->assertEquals('collections', $errors->get(0)->getPropertyPath());
-        $this->assertEquals('validation.missing_default_collection', $errors->get(0)->getMessage());
+        $this->assertEquals('views', $errors->get(0)->getPropertyPath());
+        $this->assertEquals('validation.missing_default_view', $errors->get(0)->getMessage());
 
         // Test unique entity validation.
         $contentType2 = new ContentType();
@@ -139,26 +139,26 @@ class ContentTypeEntityTest extends DatabaseAwareTestCase
         $this->assertEquals('identifier', $errors->get(0)->getPropertyPath());
         $this->assertEquals('validation.identifier_already_taken', $errors->get(0)->getMessage());
 
-        // Deleting the "all" collection from a contentType should not work.
+        // Deleting the "all" view from a contentType should not work.
         $ct3 = new ContentType();
         $ct3->setTitle('CT3')->setIdentifier('CT3')->setDomain($contentType->getDomain());
-        $this->assertTrue($ct3->getCollections()->containsKey(Collection::DEFAULT_COLLECTION_IDENTIFIER));
+        $this->assertTrue($ct3->getViews()->containsKey(View::DEFAULT_VIEW_IDENTIFIER));
 
         $errors = $this->container->get('validator')->validate($ct3);
         $this->assertCount(0, $errors);
 
-        $ct3->getCollections()->remove(Collection::DEFAULT_COLLECTION_IDENTIFIER);
+        $ct3->getViews()->remove(View::DEFAULT_VIEW_IDENTIFIER);
         $errors = $this->container->get('validator')->validate($ct3);
         $this->assertCount(1, $errors);
-        $this->assertEquals('collections', $errors->get(0)->getPropertyPath());
-        $this->assertEquals('validation.missing_default_collection', $errors->get(0)->getMessage());
+        $this->assertEquals('views', $errors->get(0)->getPropertyPath());
+        $this->assertEquals('validation.missing_default_view', $errors->get(0)->getMessage());
 
-        // Try to delete other collection
-        $other_collection = new Collection();
-        $other_collection->setIdentifier('other')->setTitle('Other')->setType('table');
-        $ct3->setCollections([$other_collection]);
-        $this->assertTrue($ct3->getCollections()->containsKey(Collection::DEFAULT_COLLECTION_IDENTIFIER));
-        $this->assertTrue($ct3->getCollections()->containsKey('other'));
+        // Try to delete other view
+        $other_view = new View();
+        $other_view->setIdentifier('other')->setTitle('Other')->setType('table');
+        $ct3->setViews([$other_view]);
+        $this->assertTrue($ct3->getViews()->containsKey(View::DEFAULT_VIEW_IDENTIFIER));
+        $this->assertTrue($ct3->getViews()->containsKey('other'));
 
         $errors = $this->container->get('validator')->validate($ct3);
         $this->assertCount(0, $errors);
@@ -166,13 +166,13 @@ class ContentTypeEntityTest extends DatabaseAwareTestCase
         $this->em->flush($ct3);
         $this->em->refresh($ct3);
 
-        $ct3->getCollections()->remove('other');
+        $ct3->getViews()->remove('other');
         $errors = $this->container->get('validator')->validate($ct3);
         $this->assertCount(0, $errors);
         $this->em->persist($ct3);
         $this->em->flush($ct3);
         $ct3 = $this->em->find('UnitedCMSCoreBundle:ContentType', $ct3->getId());
-        $this->assertFalse($ct3->getCollections()->containsKey('other'));
+        $this->assertFalse($ct3->getViews()->containsKey('other'));
     }
 
     public function testContentTypeWeight()

@@ -18,12 +18,10 @@ class SchemaTypeManagerTest extends ContainerAwareTestCase {
         // Check that core schemaTypes and factories are already registered via compiler pass.
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('Query'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('ContentResult'));
-        $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('CollectionInterface'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('ContentInterface'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('ContentResultInterface'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('ContentResult'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('SettingInterface'));
-        $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('ContentTypeCollectionInput'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('FilterInput'));
         $this->assertTrue($this->container->get('united.cms.graphql.schema_type_manager')->hasSchemaType('SortInput'));
 

@@ -14,9 +14,9 @@ services:
     public: true
 
 
-  # You can get all registered collection types from this service.
-  united.cms.collection_type_manager:
-    class: UnitedCMS\CoreBundle\Collection\CollectionTypeManager
+  # You can get all registered view types from this service.
+  united.cms.view_type_manager:
+    class: UnitedCMS\CoreBundle\View\ViewTypeManager
     arguments: ['@router.default']
     public: true
 

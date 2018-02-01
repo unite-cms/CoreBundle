@@ -42,7 +42,7 @@ class UnitedCMSManagerTest extends DatabaseAwareTestCase
             { "title": "Field 1", "identifier": "f1", "type": "text" }, 
             { "title": "Field 2", "identifier": "f2", "type": "text" }
         ], 
-        "collections": [
+        "views": [
             { "title": "All", "identifier": "all", "type": "table" },
             { "title": "Other", "identifier": "other", "type": "table" }
         ]

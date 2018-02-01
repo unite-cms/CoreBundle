@@ -9,8 +9,6 @@ use JMS\Serializer\Annotation\Accessor;
 use JMS\Serializer\Annotation\Type;
 
 use Symfony\Component\Validator\Constraints as Assert;
-use UnitedCMS\CoreBundle\Validator\Constraints\DefaultCollectionType;
-use UnitedCMS\CoreBundle\Validator\Constraints\ValidCollectionContentType;
 use UnitedCMS\CoreBundle\Validator\Constraints\ValidContentTranslationOf;
 use UnitedCMS\CoreBundle\Validator\Constraints\ValidContentTranslations;
 use UnitedCMS\CoreBundle\Validator\Constraints\ValidFieldableContentLocale;
@@ -78,16 +76,6 @@ class Content implements FieldableContent
     private $translationOf;
 
     /**
-     * @var ContentInCollection[]
-     * @Type("ArrayCollection<UnitedCMS\CoreBundle\Entity\ContentInCollection>")
-     * @Accessor(getter="getCollections",setter="setCollections")
-     * @DefaultCollectionType(message="validation.missing_default_collection")
-     * @ValidCollectionContentType(message="validation.invalid_collection_content_type")
-     * @ORM\OneToMany(targetEntity="UnitedCMS\CoreBundle\Entity\ContentInCollection", mappedBy="content", cascade={"persist", "remove", "merge"}, fetch="EXTRA_LAZY")
-     */
-    private $collections;
-
-    /**
      * @var \DateTime $created
      *
      * @Gedmo\Timestampable(on="create")
@@ -112,7 +100,6 @@ class Content implements FieldableContent
 
     public function __construct()
     {
-        $this->collections = new ArrayCollection();
         $this->translations = new ArrayCollection();
         $this->translationOf = null;
     }
@@ -125,44 +112,6 @@ class Content implements FieldableContent
     public function getId()
     {
         return $this->id;
-    }
-
-    /**
-     * @return ContentInCollection[]|ArrayCollection
-     */
-    public function getCollections()
-    {
-        return $this->collections;
-    }
-
-    /**
-     * @param ContentInCollection[] $collections
-     *
-     * @return Content
-     */
-    public function setCollections($collections)
-    {
-        $this->collections->clear();
-        foreach ($collections as $collection) {
-            $this->addCollection($collection);
-        }
-
-        return $this;
-    }
-
-    /**
-     * @param ContentInCollection $collection
-     *
-     * @return Content
-     */
-    public function addCollection(ContentInCollection $collection)
-    {
-        if (!$this->collections->containsKey($collection->getCollection()->getIdentifier())) {
-            $this->collections->set($collection->getCollection()->getIdentifier(), $collection);
-            $collection->setContent($this);
-        }
-
-        return $this;
     }
 
     /**
@@ -195,14 +144,6 @@ class Content implements FieldableContent
     public function setContentType(ContentType $contentType)
     {
         $this->contentType = $contentType;
-
-        // Content must always be in the all collection. Additionally it can be in 0..n other collections.
-        if (!$this->collections->containsKey('all')) {
-            $allCollectionBridge = new ContentInCollection();
-            $allCollectionBridge->setCollection($contentType->getCollection('all'));
-            $this->addCollection($allCollectionBridge);
-        }
-
         return $this;
     }
 

@@ -13,54 +13,52 @@ use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\ConstraintViolation;
-use UnitedCMS\CoreBundle\Collection\CollectionTypeInterface;
-use UnitedCMS\CoreBundle\Entity\Collection;
+use UnitedCMS\CoreBundle\View\ViewTypeInterface;
+use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Entity\Content;
-use UnitedCMS\CoreBundle\Entity\ContentInCollection;
 use UnitedCMS\CoreBundle\Form\WebComponentType;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
 
 class ContentController extends Controller
 {
     /**
-     * @Route("/{content_type}/{collection}")
+     * @Route("/{content_type}/{view}")
      * @Method({"GET"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
-     * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::LIST'), collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
+     * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::LIST'), view.getContentType())")
      *
-     * @param Collection $collection
+     * @param View $view
      * @return Response
      */
-    public function indexAction(Collection $collection)
+    public function indexAction(View $view)
     {
         return $this->render(
             'UnitedCMSCoreBundle:Content:index.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'template' => $this->get('united.cms.collection_type_manager')->getCollectionType(
-                    $collection->getType()
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'template' => $this->get('united.cms.view_type_manager')->getViewType(
+                    $view->getType()
                 )::getTemplate(),
-                'templateParameters' => $this->get('united.cms.collection_type_manager')->getTemplateRenderParameters(
-                    $collection
+                'templateParameters' => $this->get('united.cms.view_type_manager')->getTemplateRenderParameters(
+                    $view
                 ),
             ]
         );
     }
 
     /**
-     * @Route("/{content_type}/{collection}/create")
+     * @Route("/{content_type}/{view}/create")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
-     * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::CREATE'), collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
+     * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::CREATE'), view.getContentType())")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Request $request
      * @return Response
      */
-    public function createAction(Collection $collection, Request $request)
+    public function createAction(View $view, Request $request)
     {
         $content = new Content();
 
@@ -76,7 +74,7 @@ class ContentController extends Controller
             }
         }
 
-        $form = $this->get('united.cms.fieldable_form_builder')->createForm($collection->getContentType(), $content);
+        $form = $this->get('united.cms.fieldable_form_builder')->createForm($view->getContentType(), $content);
         $form->add('submit', SubmitType::class, ['label' => 'Create']);
         $form->handleRequest($request);
 
@@ -89,12 +87,8 @@ class ContentController extends Controller
             }
 
             $content
-                ->setContentType($collection->getContentType())
+                ->setContentType($view->getContentType())
                 ->setData($data);
-
-            $contentInCollection = new ContentInCollection();
-            $contentInCollection->setCollection($collection);
-            $content->addCollection($contentInCollection);
 
             // If content errors were found, map them to the form.
             $violations = $this->get('validator')->validate($content);
@@ -114,11 +108,11 @@ class ContentController extends Controller
                 return $this->redirectToRoute(
                     'unitedcms_core_content_index',
                     [
-                        'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                        'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                         ),
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
-                        'collection' => $collection->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
+                        'view' => $view->getIdentifier(),
                     ]
                 );
             }
@@ -127,30 +121,30 @@ class ContentController extends Controller
         return $this->render(
             'UnitedCMSCoreBundle:Content:create.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'form' => $form->createView(),
             ]
         );
     }
 
     /**
-     * @Route("/{content_type}/{collection}/update/{content}")
+     * @Route("/{content_type}/{view}/update/{content}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param Request $request
      * @return Response
      */
-    public function updateAction(Collection $collection, Content $content, Request $request)
+    public function updateAction(View $view, Content $content, Request $request)
     {
-        $form = $this->get('united.cms.fieldable_form_builder')->createForm($collection->getContentType(), $content);
+        $form = $this->get('united.cms.fieldable_form_builder')->createForm($view->getContentType(), $content);
         $form->add('submit', SubmitType::class, ['label' => 'Update']);
         $form->handleRequest($request);
 
@@ -182,11 +176,11 @@ class ContentController extends Controller
                 return $this->redirectToRoute(
                     'unitedcms_core_content_index',
                     [
-                        'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                        'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                         ),
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
-                        'collection' => $collection->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
+                        'view' => $view->getIdentifier(),
                     ]
                 );
             }
@@ -195,10 +189,10 @@ class ContentController extends Controller
         return $this->render(
             'UnitedCMSCoreBundle:Content:update.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'form' => $form->createView(),
             ]
@@ -206,18 +200,18 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/delete/{content}")
+     * @Route("/{content_type}/{view}/delete/{content}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::DELETE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param Request $request
      * @return Response
      */
-    public function deleteAction(Collection $collection, Content $content, Request $request)
+    public function deleteAction(View $view, Content $content, Request $request)
     {
 
         $form = $this->createFormBuilder()
@@ -245,11 +239,11 @@ class ContentController extends Controller
                 return $this->redirectToRoute(
                     'unitedcms_core_content_index',
                     [
-                        'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                        'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                         ),
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
-                        'collection' => $collection->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
+                        'view' => $view->getIdentifier(),
                     ]
                 );
             }
@@ -258,10 +252,10 @@ class ContentController extends Controller
         return $this->render(
             'UnitedCMSCoreBundle:Content:delete.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'form' => $form->createView(),
             ]
@@ -269,15 +263,15 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/delete-definitely/{content}")
+     * @Route("/{content_type}/{view}/delete-definitely/{content}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
-     * @param Collection $collection
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
+     * @param View $view
      * @param string $content
      * @param Request $request
      * @return Response
      */
-    public function deleteDefinitelyAction(Collection $collection, string $content, Request $request)
+    public function deleteDefinitelyAction(View $view, string $content, Request $request)
     {
 
         $em = $this->getDoctrine()->getManager();
@@ -288,7 +282,7 @@ class ContentController extends Controller
 
         $content = $em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([
             'id' => $content,
-            'contentType' => $collection->getContentType(),
+            'contentType' => $view->getContentType(),
         ]);
 
         if($em instanceof EntityManager) {
@@ -339,11 +333,11 @@ class ContentController extends Controller
                 return $this->redirectToRoute(
                     'unitedcms_core_content_index',
                     [
-                        'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                        'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                         ),
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
-                        'collection' => $collection->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
+                        'view' => $view->getIdentifier(),
                     ]
                 );
             }
@@ -352,10 +346,10 @@ class ContentController extends Controller
         return $this->render(
             'UnitedCMSCoreBundle:Content:deleteDefinitely.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'form' => $form->createView(),
             ]
@@ -363,15 +357,15 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/recover/{content}")
+     * @Route("/{content_type}/{view}/recover/{content}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
-     * @param Collection $collection
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
+     * @param View $view
      * @param string $content
      * @param Request $request
      * @return Response
      */
-    public function recoverAction(Collection $collection, string $content, Request $request)
+    public function recoverAction(View $view, string $content, Request $request)
     {
         $em = $this->getDoctrine()->getManager();
 
@@ -381,7 +375,7 @@ class ContentController extends Controller
 
         $content = $em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([
             'id' => $content,
-            'contentType' => $collection->getContentType(),
+            'contentType' => $view->getContentType(),
         ]);
 
         if($em instanceof EntityManager) {
@@ -424,11 +418,11 @@ class ContentController extends Controller
                 return $this->redirectToRoute(
                     'unitedcms_core_content_index',
                     [
-                        'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                        'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                         ),
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
-                        'collection' => $collection->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
+                        'view' => $view->getIdentifier(),
                     ]
                 );
             }
@@ -437,10 +431,10 @@ class ContentController extends Controller
         return $this->render(
             '@UnitedCMSCore/Content/recover.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'form' => $form->createView(),
             ]
@@ -448,18 +442,18 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/translations/{content}")
+     * @Route("/{content_type}/{view}/translations/{content}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param Request $request
      * @return Response
      */
-    public function translationsAction(Collection $collection, Content $content, Request $request)
+    public function translationsAction(View $view, Content $content, Request $request)
     {
 
         if(!empty($content->getTranslationOf())) {
@@ -469,11 +463,11 @@ class ContentController extends Controller
                 return $this->redirectToRoute(
                     'unitedcms_core_content_index',
                     [
-                        'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                        'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                         ),
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
-                        'collection' => $collection->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
+                        'view' => $view->getIdentifier(),
                     ]
                 );
             }
@@ -482,44 +476,44 @@ class ContentController extends Controller
         return $this->render(
             '@UnitedCMSCore/Content/translations.html.twig',
             [
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
             ]
         );
     }
 
     /**
-     * @Route("/{content_type}/{collection}/translations/{content}/add/{locale}")
+     * @Route("/{content_type}/{view}/translations/{content}/add/{locale}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param String $locale
      * @param Request $request
      * @return Response
      */
-    public function addTranslationAction(Collection $collection, Content $content, String $locale, Request $request)
+    public function addTranslationAction(View $view, Content $content, String $locale, Request $request)
     {
 
         $form = $this->createFormBuilder()
             ->add('translation', WebComponentType::class, [
                     'tag' => 'united-cms-core-reference-field',
                     'empty_data' => [
-                        'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                        'content_type' => $collection->getContentType()->getIdentifier(),
+                        'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                        'content_type' => $view->getContentType()->getIdentifier(),
                     ],
                     'attr' => [
-                        'base-url' => '/' . $collection->getContentType()->getDomain()->getOrganization() . '/',
+                        'base-url' => '/' . $view->getContentType()->getDomain()->getOrganization() . '/',
                         'content-label' => '#{id}',
                         'modal-html' => $this->render(
-                            $this->get('united.cms.collection_type_manager')->getCollectionType($collection->getType())::getTemplate(),
+                            $this->get('united.cms.view_type_manager')->getViewType($view->getType())::getTemplate(),
                             [
-                                'collection' => $collection,
-                                'parameters' => $this->get('united.cms.collection_type_manager')->getTemplateRenderParameters($collection, CollectionTypeInterface::SELECT_MODE_SINGLE),
+                                'view' => $view,
+                                'parameters' => $this->get('united.cms.view_type_manager')->getTemplateRenderParameters($view, ViewTypeInterface::SELECT_MODE_SINGLE),
                             ]
                         ),
                     ],
@@ -561,11 +555,11 @@ class ContentController extends Controller
                             return $this->redirectToRoute(
                                 'unitedcms_core_content_translations',
                                 [
-                                    'organization' => $collection->getContentType()->getDomain()->getOrganization(
+                                    'organization' => $view->getContentType()->getDomain()->getOrganization(
                                     )->getIdentifier(),
-                                    'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                                    'content_type' => $collection->getContentType()->getIdentifier(),
-                                    'collection' => $collection->getIdentifier(),
+                                    'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                                    'content_type' => $view->getContentType()->getIdentifier(),
+                                    'view' => $view->getIdentifier(),
                                     'content' => $content->getId(),
                                 ]
                             );
@@ -578,10 +572,10 @@ class ContentController extends Controller
         return $this->render(
             'UnitedCMSCoreBundle:Content:addTranslation.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'locale' => $locale,
                 'form' => $form->createView(),
@@ -590,19 +584,19 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/translations/{content}/remove/{locale}")
+     * @Route("/{content_type}/{view}/translations/{content}/remove/{locale}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param String $locale
      * @param Request $request
      * @return Response
      */
-    public function removeTranslationAction(Collection $collection, Content $content, String $locale, Request $request)
+    public function removeTranslationAction(View $view, Content $content, String $locale, Request $request)
     {
         $translations = $content->getTranslations()->filter(function(Content $content) use ($locale) { return $content->getLocale() == $locale; });
 
@@ -629,11 +623,11 @@ class ContentController extends Controller
             return $this->redirectToRoute(
                 'unitedcms_core_content_translations',
                 [
-                    'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(
+                    'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(
                     ),
-                    'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                    'content_type' => $collection->getContentType()->getIdentifier(),
-                    'collection' => $collection->getIdentifier(),
+                    'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                    'content_type' => $view->getContentType()->getIdentifier(),
+                    'view' => $view->getIdentifier(),
                     'content' => $content->getId(),
                 ]
             );
@@ -642,10 +636,10 @@ class ContentController extends Controller
         return $this->render(
             'UnitedCMSCoreBundle:Content:removeTranslation.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization(),
-                'domain' => $collection->getContentType()->getDomain(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization(),
+                'domain' => $view->getContentType()->getDomain(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'translation' => $translation,
                 'form' => $form->createView(),
@@ -654,24 +648,24 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/revisions/{content}")
+     * @Route("/{content_type}/{view}/revisions/{content}")
      * @Method({"GET"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param Request $request
      * @return Response
      */
-    public function revisionsAction(Collection $collection, Content $content, Request $request)
+    public function revisionsAction(View $view, Content $content, Request $request)
     {
         return $this->render(
             '@UnitedCMSCore/Content/revisions.html.twig',
             [
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'revisions' => $this->getDoctrine()->getManager()->getRepository('GedmoLoggable:LogEntry')->getLogEntries($content),
             ]
@@ -679,19 +673,19 @@ class ContentController extends Controller
     }
 
     /**
-     * @Route("/{content_type}/{collection}/revisions/{content}/revert/{version}")
+     * @Route("/{content_type}/{view}/revisions/{content}/revert/{version}")
      * @Method({"GET", "POST"})
-     * @Entity("collection", expr="repository.findByIdentifiers(organization, domain, content_type, collection)")
+     * @Entity("view", expr="repository.findByIdentifiers(organization, domain, content_type, view)")
      * @Entity("content")
      * @Security("is_granted(constant('UnitedCMS\\CoreBundle\\Security\\ContentVoter::UPDATE'), content)")
      *
-     * @param Collection $collection
+     * @param View $view
      * @param Content $content
      * @param int $version
      * @param Request $request
      * @return Response
      */
-    public function revisionsRevertAction(Collection $collection, Content $content, int $version, Request $request)
+    public function revisionsRevertAction(View $view, Content $content, int $version, Request $request)
     {
         $form = $this->createFormBuilder()
             ->add('submit', SubmitType::class, ['label' => 'Revert'])
@@ -708,10 +702,10 @@ class ContentController extends Controller
             return $this->redirectToRoute(
                 'unitedcms_core_content_revisions',
                 [
-                    'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(),
-                    'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                    'content_type' => $collection->getContentType()->getIdentifier(),
-                    'collection' => $collection->getIdentifier(),
+                    'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(),
+                    'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                    'content_type' => $view->getContentType()->getIdentifier(),
+                    'view' => $view->getIdentifier(),
                     'content' => $content->getId(),
                 ]
             );
@@ -720,10 +714,10 @@ class ContentController extends Controller
         return $this->render(
             '@UnitedCMSCore/Content/revertRevision.html.twig',
             [
-                'organization' => $collection->getContentType()->getDomain()->getOrganization()->getIdentifier(),
-                'domain' => $collection->getContentType()->getDomain()->getIdentifier(),
-                'collection' => $collection,
-                'contentType' => $collection->getContentType(),
+                'organization' => $view->getContentType()->getDomain()->getOrganization()->getIdentifier(),
+                'domain' => $view->getContentType()->getDomain()->getIdentifier(),
+                'view' => $view,
+                'contentType' => $view->getContentType(),
                 'content' => $content,
                 'version' => $version,
                 'form' => $form->createView(),

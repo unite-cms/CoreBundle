@@ -4,9 +4,8 @@ namespace UnitedCMS\CoreBundle\Service;
 
 
 use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\Query;
 use Symfony\Component\HttpFoundation\RequestStack;
-use UnitedCMS\CoreBundle\Entity\Collection;
+use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Entity\Organization;
@@ -128,7 +127,7 @@ class UnitedCMSManager
                 ->select('ct.id', 'ct.identifier', 'ct.title', 'ct.icon')
                 ->from('UnitedCMSCoreBundle:ContentType', 'ct')
                 ->leftJoin('ct.domain', 'd')
-                ->leftJoin('ct.collections', 'co')
+                ->leftJoin('ct.views', 'co')
                 ->where('ct.domain = :domain')
                 ->andWhere('d.organization = :organization')
                 ->getQuery()->execute(['organization' => $this->organization, 'domain' => $this->domain]);
@@ -137,21 +136,21 @@ class UnitedCMSManager
                 $contentType = new ContentType();
                 $contentType->setId($row['id'])->setIdentifier($row['identifier'])->setTitle($row['title'])->setIcon($row['icon']);
 
-                // Get collections for this contentType.
-                $collectionData = $this->em->createQueryBuilder()
+                // Get views for this contentType.
+                $viewData = $this->em->createQueryBuilder()
                     ->select('co.id', 'co.identifier', 'co.title', 'co.type', 'co.icon')
-                    ->from('UnitedCMSCoreBundle:Collection', 'co')
+                    ->from('UnitedCMSCoreBundle:View', 'co')
                     ->leftJoin('co.contentType', 'ct')
                     ->where('ct.id = :ct')
                     ->getQuery()->execute(['ct' => $contentType->getId()]);
 
-                // Remove the default 'all' collection from the contentType so it can be replaced with persisted collections.
-                $contentType->getCollections()->clear();
+                // Remove the default 'all' view from the contentType so it can be replaced with persisted views.
+                $contentType->getViews()->clear();
 
-                foreach($collectionData as $collectionRow) {
-                    $collection = new Collection();
-                    $collection->setId($collectionRow['id'])->setIdentifier($collectionRow['identifier'])->setTitle($collectionRow['title'])->setType($collectionRow['type'])->setIcon($collectionRow['icon']);
-                    $contentType->addCollection($collection);
+                foreach($viewData as $viewRow) {
+                    $view = new View();
+                    $view->setId($viewRow['id'])->setIdentifier($viewRow['identifier'])->setTitle($viewRow['title'])->setType($viewRow['type'])->setIcon($viewRow['icon']);
+                    $contentType->addView($view);
                 }
 
                 $this->domain->addContentType($contentType);
