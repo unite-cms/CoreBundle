@@ -177,7 +177,10 @@ class QueryType extends AbstractType
         if(substr($info->fieldName, 0, 3) == 'get') {
 
             $id = $args['id'];
-            $content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->find($id);
+
+            if(!$content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->find($id)) {
+                throw new UserError("Content with id '$id' was not found.");
+            }
 
             if ($content && !$this->authorizationChecker->isGranted(ContentVoter::VIEW, $content)) {
                 throw new UserError("You are not allowed to view content with id '$id'.");
@@ -188,18 +191,30 @@ class QueryType extends AbstractType
 
         // Resolve single setting type.
         elseif (substr($info->fieldName, -strlen('Setting')) === 'Setting') {
-            return $this->resolveSetting(strtolower(substr($info->fieldName, 0, -strlen('Setting'))), $value, $args, $context, $info);
+
+            $identifier = strtolower(substr($info->fieldName, 0, -strlen('Setting')));
+
+            if (!$settingType = $this->entityManager->getRepository('UnitedCMSCoreBundle:SettingType')->findOneBy(['domain' => $this->unitedCMSManager->getDomain(), 'identifier' => $identifier])) {
+                throw new UserError("SettingType '$identifier' was not found in domain.");
+            }
+
+            $setting = $settingType->getSetting();
+            if (!$this->authorizationChecker->isGranted(SettingVoter::VIEW, $setting)) {
+                throw new UserError("You are not allowed to view setting of type '$identifier'.");
+            }
+
+            return $setting;
         }
 
         // Resolve list content type.
         elseif(substr($info->fieldName, 0, 4) == 'find' && strlen($info->fieldName) > 4) {
             $args['types'] = [strtolower(substr($info->fieldName, 4))];
-            return $this->resolveContent(substr($info->fieldName, 4) . 'ContentResult',  $value, $args, $context, $info);
+            return $this->resolvefindContent(substr($info->fieldName, 4) . 'ContentResult',  $value, $args, $context, $info);
         }
 
         // Resolve generic find type
         elseif(substr($info->fieldName, 0, 4) == 'find' && strlen($info->fieldName) == 4) {
-            return $this->resolveContent('ContentResult', $value, $args, $context, $info);
+            return $this->resolvefindContent('ContentResult', $value, $args, $context, $info);
         }
 
         return null;
@@ -217,7 +232,7 @@ class QueryType extends AbstractType
      * @return mixed
      * @throws \Doctrine\Common\Persistence\Mapping\MappingException
      */
-    private function resolveContent($resultType, $value, array $args, $context, ResolveInfo $info) : AbstractPagination
+    private function resolvefindContent($resultType, $value, array $args, $context, ResolveInfo $info) : AbstractPagination
     {
 
         $args['types'] = $args['types'] ?? [];
@@ -294,44 +309,5 @@ class QueryType extends AbstractType
         }
 
         return $pagination;
-    }
-
-    /**
-     * Resolve the setting result.
-     *
-     * @param $identifier
-     * @param $value
-     * @param $args
-     * @param $context
-     * @param \GraphQL\Type\Definition\ResolveInfo $info
-     *
-     * @return mixed
-     */
-    private function resolveSetting($identifier, $value, $args, $context, ResolveInfo $info) : Setting
-    {
-        if (!$settingType = $this->entityManager->getRepository('UnitedCMSCoreBundle:SettingType')->findOneBy(
-            [
-                'domain' => $this->unitedCMSManager->getDomain(),
-                'identifier' => $identifier,
-            ]
-        )) {
-            throw new UserError("SettingType '$identifier' was not found in domain.");
-        }
-
-
-        /**
-         * @var \UnitedCMS\CoreBundle\Entity\Setting $setting
-         */
-        $setting = $settingType->getSetting();
-
-        if (!$this->authorizationChecker->isGranted(SettingVoter::VIEW, $setting)) {
-            throw new UserError("You are not allowed to view setting of type '$identifier'.");
-        }
-
-        // Create setting schema type for current domain.
-        $type = ucfirst($setting->getSettingType()->getIdentifier()).'Setting';
-        $this->schemaTypeManager->getSchemaType($type, $this->unitedCMSManager->getDomain());
-
-        return $setting;
     }
 }
