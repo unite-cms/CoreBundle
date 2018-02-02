@@ -2,10 +2,8 @@
 
 namespace UnitedCMS\CoreBundle\View;
 
-use GraphQL\Type\Definition\ResolveInfo;
 use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Entity\View;
-use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 
 abstract class ViewType implements ViewTypeInterface
 {
@@ -45,15 +43,6 @@ abstract class ViewType implements ViewTypeInterface
     function getTemplateRenderParameters(string $selectMode = self::SELECT_MODE_NONE): array
     {
         return [];
-    }
-
-    function getMutationSchemaTypes(SchemaTypeManager $schemaTypeManager) : array
-    {
-        return [];
-    }
-
-    function resolveMutationSchemaType($action, $value, array $args, $context, ResolveInfo $info) {
-        return null;
     }
 
     function validateSettings(ViewSettings $settings): array

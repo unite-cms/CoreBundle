@@ -31,5 +31,6 @@ abstract class DatabaseAwareTestCase extends ContainerAwareTestCase
         $schemaTool = new SchemaTool($this->em);
         $metadata = $this->em->getMetadataFactory()->getAllMetadata();
         $schemaTool->dropSchema($metadata);
+        $this->em->getConnection()->close();
     }
 }

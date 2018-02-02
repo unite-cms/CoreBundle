@@ -2,11 +2,9 @@
 
 namespace UnitedCMS\CoreBundle\View;
 
-use GraphQL\Type\Definition\ResolveInfo;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Entity\View;
-use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 
 class ViewTypeManager
 {
@@ -79,51 +77,6 @@ class ViewTypeManager
         $viewType->unsetEntity();
 
         return $constraints;
-    }
-
-    /**
-     * Returns all mutation schema types for the given view.
-     * @param SchemaTypeManager $schemaTypeManager
-     * @param View $view
-     * @return array
-     */
-    public function getMutationSchemaTypes(SchemaTypeManager $schemaTypeManager, View $view) : array
-    {
-        $types = [];
-        $viewType = $this->getViewType($view->getType());
-        $viewType->setEntity($view);
-        foreach($viewType->getMutationSchemaTypes($schemaTypeManager) as $action => $definition) {
-            $types[strtolower($action) . ucfirst($view->getIdentifier()) . ucfirst($view->getContentType()->getIdentifier())] = $definition;
-        }
-        $viewType->unsetEntity();
-        return $types;
-    }
-
-    /**
-     * Resolves the value for a mutation action.
-     *
-     * @param View $view
-     * @param $value
-     * @param array $args
-     * @param $context
-     * @param ResolveInfo $info
-     * @return mixed|null
-     */
-    public function resolveMutationSchemaType(View $view, $value, array $args, $context, ResolveInfo $info) {
-        $nameParts = preg_split('/(?=[A-Z])/', $info->fieldName, -1, PREG_SPLIT_NO_EMPTY);
-
-        if(count($nameParts) != 3) {
-            return NULL;
-        }
-        if($nameParts[1] != ucfirst($view->getIdentifier()) || $nameParts[2] != ucfirst($view->getContentType()->getIdentifier())) {
-            return NULL;
-        }
-
-        $viewType = $this->getViewType($view->getType());
-        $viewType->setEntity($view);
-        $resolvedValue = $viewType->resolveMutationSchemaType($nameParts[0], $value, $args, $context, $info);
-        $viewType->unsetEntity();
-        return $resolvedValue;
     }
 
     /**
