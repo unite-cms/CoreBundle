@@ -26,11 +26,10 @@ abstract class DatabaseAwareTestCase extends ContainerAwareTestCase
 
     protected function tearDown()
     {
-
-        parent::tearDown();
         $schemaTool = new SchemaTool($this->em);
         $metadata = $this->em->getMetadataFactory()->getAllMetadata();
         $schemaTool->dropSchema($metadata);
         $this->em->getConnection()->close();
+        parent::tearDown();
     }
 }
