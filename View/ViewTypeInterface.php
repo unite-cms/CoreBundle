@@ -2,8 +2,11 @@
 
 namespace UnitedCMS\CoreBundle\View;
 
+use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\ResolveInfo;
 use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Entity\View;
+use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 
 interface ViewTypeInterface
 {
@@ -31,7 +34,28 @@ interface ViewTypeInterface
 
     /**
      * @param ViewSettings $settings
+     *
      * @return ConstraintViolation[]
      */
     function validateSettings(ViewSettings $settings) : array;
+
+    /**
+     * @param SchemaTypeManager $schemaTypeManager
+     *
+     * @return array
+     */
+    function getMutationSchemaTypes(SchemaTypeManager $schemaTypeManager) : array;
+
+    /**
+     * Resolves the value for a mutation action.
+     *
+     * @param $action
+     * @param $value
+     * @param array $args
+     * @param $context
+     * @param ResolveInfo $info
+     *
+     * @return mixed
+     */
+    function resolveMutationSchemaType($action, $value, array $args, $context, ResolveInfo $info);
 }

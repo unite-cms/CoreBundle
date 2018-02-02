@@ -6,15 +6,16 @@ use Doctrine\ORM\EntityManager;
 use GraphQL\Error\UserError;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
-use Knp\Component\Pager\Paginator;
 use Symfony\Component\Form\Extension\Validator\ViolationMapper\ViolationMapper;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Form\FieldableFormBuilder;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
 use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
+use UnitedCMS\CoreBundle\View\ViewTypeManager;
 
 class MutationType extends AbstractType
 {
@@ -36,14 +37,14 @@ class MutationType extends AbstractType
     private $unitedCMSManager;
 
     /**
+     * @var ViewTypeManager $viewTypeManager
+     */
+    private $viewTypeManager;
+
+    /**
      * @var AuthorizationChecker $authorizationChecker
      */
     private $authorizationChecker;
-
-    /**
-     * @var Paginator $paginator
-     */
-    private $paginator;
 
     /**
      * @var ValidatorInterface $validator
@@ -55,10 +56,18 @@ class MutationType extends AbstractType
      */
     private $fieldableFormBuilder;
 
+    /**
+     * This saves all defined view mutations, so we can easily resolve them in resolveField action.
+     *
+     * @var View[] $viewMutations
+     */
+    private $viewMutations = [];
+
     public function __construct(
         SchemaTypeManager $schemaTypeManager,
         EntityManager $entityManager,
         UnitedCMSManager $unitedCMSManager,
+        ViewTypeManager $viewTypeManager,
         AuthorizationChecker $authorizationChecker,
         ValidatorInterface $validator,
         FieldableFormBuilder $fieldableFormBuilder
@@ -66,6 +75,7 @@ class MutationType extends AbstractType
         $this->schemaTypeManager = $schemaTypeManager;
         $this->entityManager = $entityManager;
         $this->unitedCMSManager = $unitedCMSManager;
+        $this->viewTypeManager = $viewTypeManager;
         $this->authorizationChecker = $authorizationChecker;
         $this->validator = $validator;
         $this->fieldableFormBuilder = $fieldableFormBuilder;
@@ -111,6 +121,14 @@ class MutationType extends AbstractType
                     'description' => 'The content data to save.',
                 ];
             }
+
+            // Allow all content type views to define mutation types.
+            foreach($contentType->getViews() as $view) {
+                foreach($this->viewTypeManager->getMutationSchemaTypes($this->schemaTypeManager, $view) as $key => $definition) {
+                    $fields[$key] = $definition;
+                    $this->viewMutations[$key] = $view;
+                }
+            }
         }
 
         return $fields;
@@ -145,6 +163,13 @@ class MutationType extends AbstractType
                 strtolower(substr($info->fieldName, 6, -strlen('Content'))),
                 $value, $args, $context, $info
             );
+        }
+
+        // Resolve any view mutation actions.
+        foreach ($this->viewMutations as $key => $view) {
+            if($info->fieldName === $key) {
+                return $this->viewTypeManager->resolveMutationSchemaType($view, $value, $args, $context, $info);
+            }
         }
 
         return null;

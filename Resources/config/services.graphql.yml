@@ -31,7 +31,7 @@ services:
 
     UnitedCMS\CoreBundle\SchemaType\Types\MutationType:
         tags: [united_cms.graphql.schema_type]
-        arguments: ['@united.cms.graphql.schema_type_manager', '@doctrine.orm.default_entity_manager', '@united.cms.manager', '@security.authorization_checker', '@validator', '@united.cms.fieldable_form_builder']
+        arguments: ['@united.cms.graphql.schema_type_manager', '@doctrine.orm.default_entity_manager', '@united.cms.manager', '@united.cms.view_type_manager', '@security.authorization_checker', '@validator', '@united.cms.fieldable_form_builder']
 
     UnitedCMS\CoreBundle\SchemaType\Types\ContentResultInterface:
         tags: [united_cms.graphql.schema_type]
