@@ -31,3 +31,8 @@ services:
     public: false
     tags: [united_cms.field_type]
     arguments: ['@validator', '@security.authorization_checker', '@united.cms.manager', '@doctrine.orm.entity_manager', '@united.cms.view_type_manager', '@templating.engine.twig']
+
+  # An integer input field that automatically handles position indexing (on INSERT, UPDATE, DELETE).
+  UnitedCMS\CoreBundle\Field\Types\SortIndexFieldType:
+    public: false
+    tags: [united_cms.field_type]

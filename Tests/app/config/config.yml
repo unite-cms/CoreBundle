@@ -84,7 +84,9 @@ doctrine:
                 enabled: true
         dql:
             string_functions:
-                JSON_EXTRACT: Syslogic\DoctrineJsonFunctions\Query\AST\Functions\Mysql\JsonExtract
+                JSON_EXTRACT:   Syslogic\DoctrineJsonFunctions\Query\AST\Functions\Mysql\JsonExtract
+                JSON_SET:       Syslogic\DoctrineJsonFunctions\Query\AST\Functions\Mysql\JsonSet
+                CAST:           Oro\ORM\Query\AST\Functions\Cast
 
 swiftmailer:
     disable_delivery: true

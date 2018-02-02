@@ -2,7 +2,11 @@
 
 namespace UnitedCMS\CoreBundle\Field;
 
+use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
+use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Symfony\Component\Validator\ConstraintViolation;
+use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\ContentTypeField;
 use UnitedCMS\CoreBundle\Entity\FieldableField;
 
 class FieldTypeManager
@@ -66,6 +70,34 @@ class FieldTypeManager
         $fieldType->unsetEntityField();
 
         return $constraints;
+    }
+
+    public function onContentInsert(ContentTypeField $field, Content $content, LifecycleEventArgs $args) {
+        $fieldType = $this->getFieldType($field->getType());
+
+        if(method_exists($fieldType, 'onContentInsert')) {
+            $fieldType->setEntityField($field);
+            $fieldType->onContentInsert($content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
+            $fieldType->unsetEntityField();
+        }
+    }
+
+    public function onContentUpdate(ContentTypeField $field, Content $content, PreUpdateEventArgs $args) {
+        $fieldType = $this->getFieldType($field->getType());
+        if(method_exists($fieldType, 'onContentUpdate')) {
+            $fieldType->setEntityField($field);
+            $fieldType->onContentUpdate($content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
+            $fieldType->unsetEntityField();
+        }
+    }
+
+    public function onContentRemove(ContentTypeField $field, Content $content, LifecycleEventArgs $args) {
+        $fieldType = $this->getFieldType($field->getType());
+        if(method_exists($fieldType, 'onContentRemove')) {
+            $fieldType->setEntityField($field);
+            $fieldType->onContentRemove($content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
+            $fieldType->unsetEntityField();
+        }
     }
 
     /**

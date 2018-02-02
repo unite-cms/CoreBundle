@@ -19,3 +19,12 @@ services:
     arguments: ['@security.token_storage']
     tags:
       - { name: doctrine.event_listener, event: onFlush }
+
+  # When inserting, updating or deleting content, the dispatcher notifies all parts of united CMS about this change.
+  UnitedCMS\CoreBundle\Subscriber\ContentEventDispatcher:
+    public: false
+    arguments: ['@united.cms.field_type_manager']
+    tags:
+      - { name: doctrine.event_listener, event: prePersist }
+      - { name: doctrine.event_listener, event: preUpdate }
+      - { name: doctrine.event_listener, event: preRemove }
