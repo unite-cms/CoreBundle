@@ -48,7 +48,7 @@ class DeletedContentVoter extends Voter
         // This voter can decide on a Content subject for APIClients of the same domain.
         if ($token->getUser() instanceof ApiClient) {
 
-            if($subject->getContentType()->getDomain() !== $token->getUser()->getDomain()) {
+            if($subject->getContentType()->getDomain()->getId() !== $token->getUser()->getDomain()->getId()) {
                 return self::ACCESS_ABSTAIN;
             }
 

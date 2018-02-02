@@ -9,6 +9,7 @@
 namespace UnitedCMS\CoreBundle\Tests\Functional;
 
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\User\UserInterface;
 use UnitedCMS\CoreBundle\Controller\GraphQLApiController;
@@ -575,24 +576,33 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
     }
 
     private function api(Domain $domain, UserInterface $user, string $query, array $variables = []) {
-        $reflector = new \ReflectionProperty(UnitedCMSManager::class, 'domain');
-        $reflector->setAccessible(true);
-        $reflector->setValue($this->container->get('united.cms.manager'), $domain);
-        $reflector = new \ReflectionProperty(UnitedCMSManager::class, 'organization');
-        $reflector->setAccessible(true);
-        $reflector->setValue($this->container->get('united.cms.manager'), $domain->getOrganization());
-        $reflector = new \ReflectionProperty(UnitedCMSManager::class, 'initialized');
-        $reflector->setAccessible(true);
-        $reflector->setValue($this->container->get('united.cms.manager'), true);
 
-        $this->container->get('security.token_storage')->setToken(new UsernamePasswordToken($user, null, 'united_core_api_client', $user->getRoles()));
-
+        // Fake a real HTTP request.
         $request = new Request([], [], [
             'organization' => $domain->getOrganization(),
             'domain' => $domain,
         ], [], [], [
             'REQUEST_METHOD' => 'POST',
         ], json_encode(['query' => $query, 'variables' => $variables]));
+
+
+        // For each request, initialize the cms manager.
+        $requestStack = new RequestStack();
+        $requestStack->push(new Request([], [], [
+            'organization' => $domain->getOrganization()->getIdentifier(),
+            'domain' => $domain->getIdentifier(),
+        ]));
+
+        $reflector = new \ReflectionProperty(UnitedCMSManager::class, 'requestStack');
+        $reflector->setAccessible(true);
+        $reflector->setValue($this->container->get('united.cms.manager'), $requestStack);
+
+        $reflector = new \ReflectionMethod(UnitedCMSManager::class, 'initialize');
+        $reflector->setAccessible(true);
+        $reflector->invoke($this->container->get('united.cms.manager'));
+
+        $this->container->get('security.token_storage')->setToken(new UsernamePasswordToken($user, null, 'united_core_api_client', $user->getRoles()));
+
         $response = $this->controller->indexAction($domain->getOrganization(), $domain, $request);
         return json_decode($response->getContent());
     }

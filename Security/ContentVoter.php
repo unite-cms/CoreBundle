@@ -64,7 +64,7 @@ class ContentVoter extends Voter
         // This voter can decide on a Content subject for APIClients of the same domain.
         if ($token->getUser() instanceof ApiClient && $subject instanceof Content) {
 
-            if($subject->getContentType()->getDomain() !== $token->getUser()->getDomain()) {
+            if($subject->getContentType()->getDomain()->getId() !== $token->getUser()->getDomain()->getId()) {
                 return self::ACCESS_ABSTAIN;
             }
 
@@ -73,7 +73,7 @@ class ContentVoter extends Voter
 
         if ($token->getUser() instanceof ApiClient && $subject instanceof ContentType) {
 
-            if($subject->getDomain() !== $token->getUser()->getDomain()) {
+            if($subject->getDomain()->getId() !== $token->getUser()->getDomain()->getId()) {
                 return self::ACCESS_ABSTAIN;
             }
 
