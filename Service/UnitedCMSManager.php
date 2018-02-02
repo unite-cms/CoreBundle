@@ -56,7 +56,6 @@ class UnitedCMSManager
      */
     private function initialize()
     {
-
         $this->initialized = true;
 
         $request = $this->requestStack->getCurrentRequest();
@@ -68,16 +67,25 @@ class UnitedCMSManager
         // Get organization and domain form current request.
         $requestOrganization = $request->attributes->get('organization');
         $requestDomain = $request->attributes->get('domain');
+
         if ($requestOrganization instanceof Organization) {
             $requestOrganizationOriginal = $this->em->getUnitOfWork()->getOriginalEntityData($requestOrganization);
-            $organizationIdentifier = $requestOrganizationOriginal['identifier'];
+            if(!empty($requestOrganizationOriginal['identifier'])) {
+                $organizationIdentifier = $requestOrganizationOriginal['identifier'];
+            } else {
+                $organizationIdentifier = $requestOrganization->getIdentifier();
+            }
         } else {
             $organizationIdentifier = $requestOrganization;
         }
 
         if ($requestDomain instanceof Domain) {
             $requestDomainOriginal = $this->em->getUnitOfWork()->getOriginalEntityData($requestDomain);
-            $domainIdentifier = $requestDomainOriginal['identifier'];
+            if(!empty($requestOrganizationOriginal['identifier'])) {
+                $domainIdentifier = $requestDomainOriginal['identifier'];
+            } else {
+                $domainIdentifier = $requestDomain->getIdentifier();
+            }
         } else {
             $domainIdentifier = $requestDomain;
         }
