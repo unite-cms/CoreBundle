@@ -7,6 +7,7 @@ import UIkit from 'uikit';
 import Icons from 'uikit/dist/js/uikit-icons';
 
 import Table from "./vue/views/Table.vue";
+import Sortable from "./vue/views/Sortable.vue";
 import DomainEditor from "./vue/DomainEditor.vue";
 import Reference from "./vue/field/Reference.vue";
 
@@ -22,5 +23,6 @@ window.UnitedCMSEventBus = new Vue();
 
 // Register View: Table
 Vue.customElement('united-cms-core-view-table', Table);
+Vue.customElement('united-cms-core-view-sortable', Sortable);
 Vue.customElement('united-cms-core-domaineditor', DomainEditor);
 Vue.customElement('united-cms-core-reference-field', Reference);
