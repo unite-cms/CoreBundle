@@ -40,7 +40,7 @@ class RecoverContentLogger
                     $logEntry->setAction('recover');
                     $logEntry->setObjectId($entity->getId());
                     $logEntry->setObjectClass(get_class($entity));
-                    $logEntry->setUsername($this->securityTokenStorage->getToken()->getUser());
+                    $logEntry->setUsername($this->securityTokenStorage->getToken() ? $this->securityTokenStorage->getToken()->getUser() : 'Anonymous');
                     $logEntry->setLoggedAt();
                     $logEntry->setVersion($logEntries[0]->getVersion() + 1);
                     $args->getEntityManager()->persist($logEntry);

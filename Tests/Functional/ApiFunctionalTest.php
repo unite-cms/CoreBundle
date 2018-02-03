@@ -1291,5 +1291,29 @@ class ApiFunctionalTestCase extends DatabaseAwareTestCase
         $this->assertEquals("Updated News", $response->data->updateNews->title);
         $this->assertEquals("<p>Hello new World</p>", $response->data->updateNews->content);
         $this->assertNull($response->data->updateNews->category);
+
+        // update partial news content with valid content.
+        $response = $this->api(
+            $this->domains['marketing'],
+            $this->users['marketing_ROLE_EDITOR'], 'mutation($id: ID!) {
+                updateNews(id: $id, data: { title: "Updated News2" }) {
+                    id, 
+                    title,
+                    content,
+                    category {
+                      id,
+                      name
+                    }
+                }
+            }', [
+            'id' => $news->id,
+            'category' => null
+        ]);
+
+        $this->assertTrue(empty($response->errors));
+        $this->assertEquals($news->id, $response->data->updateNews->id);
+        $this->assertEquals("Updated News2", $response->data->updateNews->title);
+        $this->assertEquals("<p>Hello new World</p>", $response->data->updateNews->content);
+        $this->assertNull($response->data->updateNews->category);
     }
 }
