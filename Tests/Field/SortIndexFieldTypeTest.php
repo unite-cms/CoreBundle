@@ -122,7 +122,8 @@ class SortIndexFieldTypeTest extends FieldTypeTestCase
         $this->assertEquals(['position' => 2, 'label' => 'C2'], $getContent[2]->getData());
         $this->assertEquals(['position' => 3, 'label' => 'C4'], $getContent[3]->getData());
 
-        // Now delete one content element, all elements after should auto update.
+        // Now delete one content element, all elements after that element should auto update.
+        $deletedContentId = $getContent[1]->getId();
         $this->em->remove($getContent[1]);
         $this->em->flush($getContent[1]);
         $this->em->clear();
@@ -136,6 +137,29 @@ class SortIndexFieldTypeTest extends FieldTypeTestCase
         $this->assertEquals(['position' => 0, 'label' => 'C3'], $getContent[0]->getData());
         $this->assertEquals(['position' => 1, 'label' => 'C2'], $getContent[1]->getData());
         $this->assertEquals(['position' => 2, 'label' => 'C4'], $getContent[2]->getData());
+
+        // Now restore the content element, it should get it's old position.
+        $this->em->getFilters()->disable('gedmo_softdeleteable');
+        $deletedContent = $this->em->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([
+            'contentType' => $contentType,
+            'id' => $deletedContentId,
+        ]);
+        $this->em->getFilters()->enable('gedmo_softdeleteable');
+        $deletedContent->recoverDeleted();
+        $this->em->flush();
+        $this->em->clear();
+
+        // Make sure, that the content is in correct order.
+        $getContent = $this->em->getRepository('UnitedCMSCoreBundle:Content')->createQueryBuilder('c')
+            ->select('c')
+            ->where('c.contentType = :contentType')->setParameter(':contentType', $contentType)
+            ->addOrderBy("JSON_EXTRACT(c.data, '$.position')")
+            ->getQuery()->execute();
+
+        $this->assertEquals(['position' => 0, 'label' => 'C3'], $getContent[0]->getData());
+        $this->assertEquals(['position' => 1, 'label' => 'C1'], $getContent[1]->getData());
+        $this->assertEquals(['position' => 2, 'label' => 'C2'], $getContent[2]->getData());
+        $this->assertEquals(['position' => 3, 'label' => 'C4'], $getContent[3]->getData());
     }
 
 

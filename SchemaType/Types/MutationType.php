@@ -238,6 +238,10 @@ class MutationType extends AbstractType
         }
 
         $form = $this->fieldableFormBuilder->createForm($content->getContentType(), $content, ['csrf_protection' => false]);
+
+        // Update only changed fields on this entity. Note: nested values will get replaced, no recursively replacement possible here.
+        $args['data'] = array_replace($content->getData(), $args['data']);
+
         $form->submit($args['data']);
 
         if ($form->isSubmitted() && $form->isValid()) {
