@@ -222,4 +222,33 @@ class ContentTypeEntityTest extends DatabaseAwareTestCase
         $this->assertStringStartsWith('identifier', $errors->get(0)->getPropertyPath());
         $this->assertEquals('validation.reserved_identifier', $errors->get(0)->getMessage());
     }
+
+    public function testFindByIdentifiers() {
+        $org = new Organization();
+        $org->setTitle('Org')->setIdentifier('org');
+        $this->em->persist($org);
+        $this->em->flush($org);
+
+        $domain = new Domain();
+        $domain->setTitle('Domain')->setIdentifier('domain')->setOrganization($org);
+        $this->em->persist($domain);
+        $this->em->flush($domain);
+
+        $contentType = new ContentType();
+        $contentType->setIdentifier('ct1')->setTitle('Ct1')->setDomain($domain);
+        $this->em->persist($contentType);
+        $this->em->flush($contentType);
+
+        // Try to find with invalid identifiers.
+        $repo = $this->em->getRepository('UnitedCMSCoreBundle:ContentType');
+        $this->assertNull($repo->findByIdentifiers('foo', 'baa', 'luu'));
+        $this->assertNull($repo->findByIdentifiers('org', 'baa', 'luu'));
+        $this->assertNull($repo->findByIdentifiers('foo', 'domain', 'luu'));
+        $this->assertNull($repo->findByIdentifiers('org', 'domain', 'luu'));
+        $this->assertNull($repo->findByIdentifiers('foo', 'domain', 'ct1'));
+        $this->assertNull($repo->findByIdentifiers('org', 'baa', 'ct1'));
+
+        // Try to find with valid identifier.
+        $this->assertEquals($contentType, $repo->findByIdentifiers('org', 'domain', 'ct1'));
+    }
 }

@@ -5,24 +5,24 @@ namespace UnitedCMS\CoreBundle\Repository;
 use Gedmo\Sortable\Entity\Repository\SortableRepository;
 
 /**
- * SettingTypeRepository
+ * ContentTypeRepository
  */
-class SettingTypeRepository extends SortableRepository
+class ContentTypeRepository extends SortableRepository
 {
-    public function findByIdentifiers($organization, $domain, $settingType)
+    public function findByIdentifiers($organization, $domain, $contentType)
     {
-        $result = $this->createQueryBuilder('st')
-            ->select('st', 'dm', 'org')
-            ->join('st.domain', 'dm')
+        $result = $this->createQueryBuilder('ct')
+            ->select('ct', 'dm', 'org')
+            ->join('ct.domain', 'dm')
             ->join('dm.organization', 'org')
             ->where('org.identifier = :organization')
             ->andWhere('dm.identifier = :domain')
-            ->andWhere('st.identifier = :settingType')
+            ->andWhere('ct.identifier = :contentType')
             ->setParameters(
                 [
                     'organization' => $organization,
                     'domain' => $domain,
-                    'settingType' => $settingType,
+                    'contentType' => $contentType,
                 ]
             )
             ->getQuery()->getResult();

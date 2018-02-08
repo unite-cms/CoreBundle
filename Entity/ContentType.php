@@ -22,7 +22,7 @@ use UnitedCMS\CoreBundle\Validator\Constraints\ValidPermissions;
  * ContentType
  *
  * @ORM\Table(name="content_type")
- * @ORM\Entity(repositoryClass="Gedmo\Sortable\Entity\Repository\SortableRepository")
+ * @ORM\Entity(repositoryClass="UnitedCMS\CoreBundle\Repository\ContentTypeRepository")
  * @UniqueEntity(fields={"identifier", "domain"}, message="validation.identifier_already_taken")
  * @ExclusionPolicy("all")
  */
