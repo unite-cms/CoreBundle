@@ -35,4 +35,6 @@ interface Fieldable
      * @return array
      */
     public function getLocales() : array;
+
+    public function getIdentifier();
 }
