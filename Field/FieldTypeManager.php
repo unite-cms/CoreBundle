@@ -48,10 +48,7 @@ class FieldTypeManager
     public function validateFieldData(FieldableField $field, $data): array
     {
         $fieldType = $this->getFieldType($field->getType());
-        $fieldType->setEntityField($field);
-        $constraints = $fieldType->validateData($data);
-        $fieldType->unsetEntityField();
-
+        $constraints = $fieldType->validateData($field, $data);
         return $constraints;
     }
 
@@ -65,10 +62,7 @@ class FieldTypeManager
     public function validateFieldSettings(FieldableField $field, FieldableFieldSettings $settings): array
     {
         $fieldType = $this->getFieldType($field->getType());
-        $fieldType->setEntityField($field);
-        $constraints = $fieldType->validateSettings($settings);
-        $fieldType->unsetEntityField();
-
+        $constraints = $fieldType->validateSettings($field,$settings);
         return $constraints;
     }
 
@@ -76,27 +70,21 @@ class FieldTypeManager
         $fieldType = $this->getFieldType($field->getType());
 
         if(method_exists($fieldType, 'onContentInsert')) {
-            $fieldType->setEntityField($field);
-            $fieldType->onContentInsert($content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
-            $fieldType->unsetEntityField();
+            $fieldType->onContentInsert($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
         }
     }
 
     public function onContentUpdate(ContentTypeField $field, Content $content, PreUpdateEventArgs $args) {
         $fieldType = $this->getFieldType($field->getType());
         if(method_exists($fieldType, 'onContentUpdate')) {
-            $fieldType->setEntityField($field);
-            $fieldType->onContentUpdate($content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
-            $fieldType->unsetEntityField();
+            $fieldType->onContentUpdate($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
         }
     }
 
     public function onContentRemove(ContentTypeField $field, Content $content, LifecycleEventArgs $args) {
         $fieldType = $this->getFieldType($field->getType());
         if(method_exists($fieldType, 'onContentRemove')) {
-            $fieldType->setEntityField($field);
-            $fieldType->onContentRemove($content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
-            $fieldType->unsetEntityField();
+            $fieldType->onContentRemove($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
         }
     }
 

@@ -8,6 +8,7 @@ use Doctrine\ORM\Event\PreUpdateEventArgs;
 use GraphQL\Type\Definition\Type;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Field\FieldType;
 use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 
@@ -16,26 +17,25 @@ class SortIndexFieldType extends FieldType
     const TYPE = "sortindex";
     const FORM_TYPE = IntegerType::class;
 
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
+    function getGraphQLType(FieldableField $field, SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
     {
         return Type::int();
     }
 
-    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
+    function getGraphQLInputType(FieldableField $field, SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return Type::int();
     }
 
-    public function onContentInsert(Content $content, EntityRepository $repository, LifecycleEventArgs $args) {
-
+    public function onContentInsert(FieldableField $field, Content $content, EntityRepository $repository, LifecycleEventArgs $args) {
         // Set the position of the new item to max position.
         $data = $content->getData();
-        $data[$this->field->getIdentifier()] = $repository->count(['contentType' => $content->getContentType()]);
+        $data[$field->getIdentifier()] = $repository->count(['contentType' => $content->getContentType()]);
         $content->setData($data);
     }
 
-    public function onContentUpdate(Content $content, EntityRepository $repository, PreUpdateEventArgs $args) {
+    public function onContentUpdate(FieldableField $field, Content $content, EntityRepository $repository, PreUpdateEventArgs $args) {
 
-        $fieldIdentifier = $this->field->getIdentifier();
+        $fieldIdentifier = $field->getIdentifier();
 
         // if we recover a deleted content, it's like we are moving the item from the end of the list to its original position.
         $originalPosition = null;
@@ -98,9 +98,9 @@ class SortIndexFieldType extends FieldType
         }
     }
 
-    public function onContentRemove(Content $content, EntityRepository $repository, LifecycleEventArgs $args) {
+    public function onContentRemove(FieldableField $field, Content $content, EntityRepository $repository, LifecycleEventArgs $args) {
 
-        $fieldIdentifier = $this->field->getIdentifier();
+        $fieldIdentifier = $field->getIdentifier();
 
         // all content after the deleted one should get --.
         $repository->createQueryBuilder('c')

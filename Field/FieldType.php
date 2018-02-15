@@ -33,11 +33,6 @@ abstract class FieldType implements FieldTypeInterface
     const REQUIRED_SETTINGS = [];
 
     /**
-     * @var FieldableField $field
-     */
-    protected $field;
-
-    /**
      * {@inheritdoc}
      */
     static function getType(): string {
@@ -47,16 +42,16 @@ abstract class FieldType implements FieldTypeInterface
     /**
      * {@inheritdoc}
      */
-    function getFormType(): string {
+    function getFormType(FieldableField $field): string {
         return static::FORM_TYPE;
     }
 
     /**
      * {@inheritdoc}
      */
-    function getFormOptions(): array {
+    function getFormOptions(FieldableField $field): array {
         return [
-            'label' => $this->getTitle(),
+            'label' => $this->getTitle($field),
             'required' => false,
         ];
     }
@@ -64,77 +59,47 @@ abstract class FieldType implements FieldTypeInterface
     /**
      * {@inheritdoc}
      */
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
+    function getGraphQLType(FieldableField $field, SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return Type::string();
     }
 
     /**
      * {@inheritdoc}
      */
-    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
+    function getGraphQLInputType(FieldableField $field, SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return Type::string();
     }
 
     /**
      * {@inheritdoc}
      */
-    function resolveGraphQLData($value) {
-        if (!$this->fieldIsPresent()) {
-            return 'undefined';
-        }
+    function resolveGraphQLData(FieldableField $field, $value) {
         return (string)$value;
     }
 
     /**
      * {@inheritdoc}
      */
-    function setEntityField(FieldableField $field) {
-        $this->field = $field;
-        return $this;
+    function getTitle(FieldableField $field): string {
+        return $field->getTitle();
     }
 
     /**
      * {@inheritdoc}
      */
-    function unsetEntityField() {
-        $this->field = null;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function fieldIsPresent(): bool {
-        return !empty($this->field);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    function getTitle(): string {
-        if (!$this->fieldIsPresent()) {
-            return 'Undefined';
-        }
-        return $this->field->getTitle();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    function getIdentifier(): string {
-        if (!$this->fieldIsPresent()) {
-            return 'undefined';
-        }
-        return $this->field->getIdentifier();
+    function getIdentifier(FieldableField $field): string {
+        return $field->getIdentifier();
     }
 
     /**
      * Basic settings validation based on self::SETTINGS and self::REQUIRED_SETTINGS constants. More sophisticated
      * validation should be done in child implementations.
      *
+     * @param FieldableField $field
      * @param FieldableFieldSettings $settings
      * @return array
      */
-    function validateSettings(FieldableFieldSettings $settings): array
+    function validateSettings(FieldableField $field, FieldableFieldSettings $settings): array
     {
         $violations = [];
 
@@ -176,18 +141,18 @@ abstract class FieldType implements FieldTypeInterface
     /**
      * {@inheritdoc}
      */
-    function validateData($data): array {
+    function validateData(FieldableField $field, $data): array {
         return [];
     }
 
-    protected function createViolation($message, $messageTemplate = null, $parameters = [], $root = null, string $propertyPath = null, $invalidValue = null, $plural = null) {
+    protected function createViolation($field, $message, $messageTemplate = null, $parameters = [], $root = null, string $propertyPath = null, $invalidValue = null, $plural = null) {
 
         if(!$messageTemplate) {
             $messageTemplate = $message;
         }
 
         if(!$propertyPath) {
-            $propertyPath = '[' . $this->getIdentifier() . ']';
+            $propertyPath = '[' . $this->getIdentifier($field) . ']';
         }
 
         return new ConstraintViolation($message, $messageTemplate, $parameters, $root, $propertyPath, $invalidValue, $plural);

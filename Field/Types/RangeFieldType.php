@@ -3,6 +3,7 @@
 namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Symfony\Component\Form\Extension\Core\Type\RangeType;
+use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Field\FieldType;
 
 class RangeFieldType extends FieldType
@@ -15,13 +16,13 @@ class RangeFieldType extends FieldType
      */
     const SETTINGS = [ 'min', 'max', 'step' ];
 
-    function getFormOptions(): array
+    function getFormOptions(FieldableField $field): array
     {
-        return array_merge(parent::getFormOptions(), [
+        return array_merge(parent::getFormOptions($field), [
             'attr' => [
-                'min' => $this->field->getSettings()->min ?? 0,
-                'max' => $this->field->getSettings()->max ?? 100,
-                'step' => $this->field->getSettings()->step ?? 1
+                'min' => $field->getSettings()->min ?? 0,
+                'max' => $field->getSettings()->max ?? 100,
+                'step' => $field->getSettings()->step ?? 1
             ],
         ]);
     }

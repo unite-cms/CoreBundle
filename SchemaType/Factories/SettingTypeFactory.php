@@ -106,9 +106,7 @@ class SettingTypeFactory implements SchemaTypeFactoryInterface
          */
         foreach ($settingType->getFields() as $field) {
             $fieldTypes[$field->getIdentifier()] = $this->fieldTypeManager->getFieldType($field->getType());
-            $fieldTypes[$field->getIdentifier()]->setEntityField($field);
-            $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($schemaTypeManager, $nestingLevel + 1);
-            $fieldTypes[$field->getIdentifier()]->unsetEntityField();
+            $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($field, $schemaTypeManager, $nestingLevel + 1);
         }
 
         return new ObjectType(
@@ -137,13 +135,9 @@ class SettingTypeFactory implements SchemaTypeFactoryInterface
                                 return null;
                             }
 
-                            $fieldTypes[$info->fieldName]->setEntityField(
-                                $settingType->getFields()->get($info->fieldName)
-                            );
                             $fieldData = array_key_exists($info->fieldName, $value->getData()) ? $value->getData(
                             )[$info->fieldName] : null;
-                            $data = $fieldTypes[$info->fieldName]->resolveGraphQLData($fieldData);
-                            $fieldTypes[$info->fieldName]->unsetEntityField();
+                            $data = $fieldTypes[$info->fieldName]->resolveGraphQLData($settingType->getFields()->get($info->fieldName), $fieldData);
 
                             return $data;
                     }

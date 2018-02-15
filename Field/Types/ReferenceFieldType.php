@@ -8,6 +8,7 @@ use Symfony\Component\Form\Exception\InvalidArgumentException;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Form\ReferenceType;
 use UnitedCMS\CoreBundle\View\ViewTypeInterface;
 use UnitedCMS\CoreBundle\View\ViewTypeManager;
@@ -79,12 +80,11 @@ class ReferenceFieldType extends FieldType
     }
 
     /**
-     * @return array
-     * @throws \Twig\Error\Error|InvalidArgumentException
+     * {@inheritdoc}
      */
-    function getFormOptions(): array
+    function getFormOptions(FieldableField $field): array
     {
-        $settings = $this->field->getSettings();
+        $settings = $field->getSettings();
         $settings->view = $settings->view ?? 'all';
 
         // Get content type and check if we have access to it.
@@ -106,7 +106,7 @@ class ReferenceFieldType extends FieldType
         ]);
 
         // Pass the rendered view HTML and other parameters as a form option.
-        return array_merge(parent::getFormOptions(), [
+        return array_merge(parent::getFormOptions($field), [
             'empty_data' => [
                 'domain' => $contentType->getDomain()->getIdentifier(),
                 'content_type' => $contentType->getIdentifier(),
@@ -128,9 +128,9 @@ class ReferenceFieldType extends FieldType
     /**
      * {@inheritdoc}
      */
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
+    function getGraphQLType(FieldableField $field, SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
 
-        $name = ucfirst($this->field->getSettings()->content_type . 'Content');
+        $name = ucfirst($field->getSettings()->content_type . 'Content');
 
         if($nestingLevel > 0) {
             $name .= 'Level' . $nestingLevel;
@@ -143,7 +143,7 @@ class ReferenceFieldType extends FieldType
     /**
      * {@inheritdoc}
      */
-    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
+    function getGraphQLInputType(FieldableField $field, SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return $schemaTypeManager->getSchemaType('ReferenceFieldTypeInput', $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 
@@ -154,7 +154,7 @@ class ReferenceFieldType extends FieldType
      * @throws InvalidArgumentException
      * @return null|Content
      */
-    function resolveGraphQLData($value) {
+    function resolveGraphQLData(FieldableField $field, $value) {
         if(empty($value)) {
             return null;
         }
@@ -178,7 +178,7 @@ class ReferenceFieldType extends FieldType
     /**
      * {@inheritdoc}
      */
-    function validateData($data): array {
+    function validateData(FieldableField $field, $data): array {
         $violations = [];
 
         // Only validate available data.
@@ -188,15 +188,15 @@ class ReferenceFieldType extends FieldType
 
         // Make sure, that all required fields are set.
         if(empty($data['domain']) || empty($data['content_type']) || empty($data['content'])) {
-            $violations[] = $this->createViolation('validation.missing_definition');
+            $violations[] = $this->createViolation($field,'validation.missing_definition');
         }
 
         // Try to resolve the data to check if the current user is allowed to access it.
         else {
             try {
-                $this->resolveGraphQLData($data);
+                $this->resolveGraphQLData($field, $data);
             } catch (InvalidArgumentException $e) {
-                $violations[] = $this->createViolation('validation.wrong_definition');
+                $violations[] = $this->createViolation($field,'validation.wrong_definition');
             }
         }
 

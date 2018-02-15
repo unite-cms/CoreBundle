@@ -116,16 +116,13 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
          */
         foreach ($contentType->getFields() as $field) {
             $fieldTypes[$field->getIdentifier()] = $this->fieldTypeManager->getFieldType($field->getType());
-            $fieldTypes[$field->getIdentifier()]->setEntityField($field);
 
             // If we want to create an InputObjectType, get GraphQLInputType.
             if($isInputType) {
-                $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLInputType($schemaTypeManager, $nestingLevel + 1);
+                $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLInputType($field, $schemaTypeManager, $nestingLevel + 1);
             } else {
-                $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($schemaTypeManager, $nestingLevel + 1);
+                $fields[$field->getIdentifier()] = $fieldTypes[$field->getIdentifier()]->getGraphQLType($field, $schemaTypeManager, $nestingLevel + 1);
             }
-
-            $fieldTypes[$field->getIdentifier()]->unsetEntityField();
         }
 
         if($isInputType) {
@@ -184,15 +181,11 @@ class ContentTypeFactory implements SchemaTypeFactoryInterface
                                     return null;
                                 }
 
-                                $fieldTypes[$info->fieldName]->setEntityField(
-                                    $contentType->getFields()->get($info->fieldName)
-                                );
                                 $fieldData = array_key_exists(
                                     $info->fieldName,
                                     $value->getData()
                                 ) ? $value->getData()[$info->fieldName] : null;
-                                $data = $fieldTypes[$info->fieldName]->resolveGraphQLData($fieldData);
-                                $fieldTypes[$info->fieldName]->unsetEntityField();
+                                $data = $fieldTypes[$info->fieldName]->resolveGraphQLData($contentType->getFields()->get($info->fieldName), $fieldData);
 
                                 return $data;
                         }

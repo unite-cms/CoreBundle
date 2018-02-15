@@ -3,6 +3,7 @@
 namespace UnitedCMS\CoreBundle\Tests\Entity;
 
 use Symfony\Component\Validator\ConstraintViolation;
+use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Entity\Setting;
 use UnitedCMS\CoreBundle\Entity\SettingType;
 use UnitedCMS\CoreBundle\Entity\SettingTypeField;
@@ -67,7 +68,7 @@ class SettingEntityTest extends DatabaseAwareTestCase
         {
             const TYPE = "setting_entity_test_mocked_field";
 
-            function validateData($data): array
+            function validateData(FieldableField $field, $data): array
             {
                 if ($data) {
                     return [

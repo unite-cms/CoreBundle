@@ -3,9 +3,8 @@
 namespace UnitedCMS\CoreBundle\Tests\Functional;
 
 use Symfony\Component\Form\DataTransformerInterface;
-use Symfony\Component\Form\Exception\TransformationFailedException;
-use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
 use UnitedCMS\CoreBundle\Entity\Fieldable;
 use UnitedCMS\CoreBundle\Entity\FieldableContent;
 use UnitedCMS\CoreBundle\Entity\FieldableField;
@@ -40,6 +39,9 @@ class FieldableFormBuilderTest extends ContainerAwareTestCase
             public function addField(FieldableField $field) {}
             public function getLocales(): array { return []; }
             public function getIdentifier() { return ''; }
+            public function getIdentifierPath($delimiter = '/') { return $this->getIdentifier(); }
+            public function getParentEntity() { return null; }
+            public function getRootEntity(): Fieldable { return $this; }
         };
         $content = new class implements FieldableContent {
             private $data = ['field1' => 'Any Value'];
@@ -124,52 +126,5 @@ class FieldableFormBuilderTest extends ContainerAwareTestCase
         // NOTE: Form validation is not handled by FieldTypes but the FormTypes, they return.
         // Since this are standard symfony form types, they must not be tested generally.
         // However you should test individual FormType implementations if you are using them in your FieldTypes.
-    }
-
-    public function testFormTypeWithDataTransformer() {
-
-        $dataTransformer = new class implements DataTransformerInterface {
-            public function transform($value)
-            {
-                return 'transform_' . $value;
-            }
-            public function reverseTransform($value)
-            {
-                return 'reverseTransform_' . $value;
-            }
-        };
-
-        $ft1 = $this->createMock(FieldTypeInterface::class);
-        $ft1->expects($this->any())
-            ->method('getType')
-            ->willReturn('ft1');
-        $ft1->expects($this->any())
-            ->method('getIdentifier')
-            ->willReturn('field1');
-        $ft1->expects($this->any())
-            ->method('getFormType')
-            ->willReturn(TextType::class);
-        $ft1->expects($this->any())
-            ->method('getDataTransformer')
-            ->willReturn($dataTransformer);
-
-        $ft1Field = $this->createMock(FieldableField::class);
-
-        $data = [
-            'field1' => 'Just Text',
-        ];
-        $options = ['fields' => [
-            new FieldableFormField($ft1, $ft1Field),
-        ], 'csrf_protection' => false];
-
-        $form = $this->container->get('form.factory')->create(FieldableFormType::class, $data, $options);
-
-        $this->assertInstanceOf(FieldableFormType::class, $form->getConfig()->getType()->getInnerType());
-        $this->assertCount(1, $form);
-        $this->assertEquals($form->getData(), $data);
-        $this->assertEquals([$dataTransformer], $form->get('field1')->getConfig()->getModelTransformers());
-
-        $form->submit([ 'field1' => 'A new value']);
-        $this->assertEquals([ 'field1' => 'reverseTransform_A new value'], $form->getData());
     }
 }

@@ -6,6 +6,7 @@ use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Entity\Content;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\ContentTypeField;
+use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Field\FieldType;
 use UnitedCMS\CoreBundle\Tests\DatabaseAwareTestCase;
 
@@ -67,7 +68,7 @@ class ContentEntityTest extends DatabaseAwareTestCase
         {
             const TYPE = "content_entity_test_mocked_field";
 
-            function validateData($data): array
+            function validateData(FieldableField $field, $data): array
             {
                 if ($data) {
                     return [

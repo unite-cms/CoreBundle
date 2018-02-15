@@ -3,6 +3,8 @@
 namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use UnitedCMS\CoreBundle\Entity\Fieldable;
+use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Field\FieldType;
 
 class ChoiceFieldType extends FieldType
@@ -20,10 +22,10 @@ class ChoiceFieldType extends FieldType
      */
     const REQUIRED_SETTINGS = [ 'choices' ];
 
-    function getFormOptions(): array
+    function getFormOptions(FieldableField $field): array
     {
-        return array_merge(parent::getFormOptions(), [
-            'choices' => $this->field->getSettings()->choices,
+        return array_merge(parent::getFormOptions($field), [
+            'choices' => $field->getSettings()->choices,
         ]);
     }
 }

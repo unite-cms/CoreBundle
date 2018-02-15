@@ -507,5 +507,26 @@ class SettingType implements Fieldable
 
         return $this;
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getRootEntity() : Fieldable {
+        return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getIdentifierPath($delimiter = '/') {
+        return $this->getIdentifier();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getParentEntity() {
+        return null;
+    }
 }
 
