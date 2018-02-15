@@ -3,11 +3,13 @@
 namespace UnitedCMS\CoreBundle\Field;
 
 use GraphQL\Type\Definition\Type;
-use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 
+/**
+ * An abstract base field type, that allows to easily implement custom field types.
+ */
 abstract class FieldType implements FieldTypeInterface
 {
     /**
@@ -35,86 +37,103 @@ abstract class FieldType implements FieldTypeInterface
      */
     protected $field;
 
-    static function getType(): string
-    {
+    /**
+     * {@inheritdoc}
+     */
+    static function getType(): string {
         return static::TYPE;
     }
 
-    function getFormType(): string
-    {
+    /**
+     * {@inheritdoc}
+     */
+    function getFormType(): string {
         return static::FORM_TYPE;
     }
 
-    function getDataTransformer() {
-        return null;
-    }
-
-    function getFormOptions(): array
-    {
+    /**
+     * {@inheritdoc}
+     */
+    function getFormOptions(): array {
         return [
             'label' => $this->getTitle(),
             'required' => false,
         ];
     }
 
-    function setEntityField(FieldableField $field)
-    {
-        $this->field = $field;
-
-        return $this;
-    }
-
-    function unsetEntityField()
-    {
-        $this->field = null;
-    }
-
-    public function fieldIsPresent(): bool
-    {
-        return !empty($this->field);
-    }
-
-    function getTitle(): string
-    {
-        if (!$this->fieldIsPresent()) {
-            return 'Undefined';
-        }
-
-        return $this->field->getTitle();
-    }
-
-    function getIdentifier(): string
-    {
-        if (!$this->fieldIsPresent()) {
-            return 'undefined';
-        }
-
-        return $this->field->getIdentifier();
-    }
-
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
-    {
+    /**
+     * {@inheritdoc}
+     */
+    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return Type::string();
     }
 
+    /**
+     * {@inheritdoc}
+     */
     function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return Type::string();
     }
 
-    function resolveGraphQLData($value)
-    {
+    /**
+     * {@inheritdoc}
+     */
+    function resolveGraphQLData($value) {
         if (!$this->fieldIsPresent()) {
             return 'undefined';
         }
-
         return (string)$value;
     }
 
-    function validateData($data): array
-    {
-        return [];
+    /**
+     * {@inheritdoc}
+     */
+    function setEntityField(FieldableField $field) {
+        $this->field = $field;
+        return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    function unsetEntityField() {
+        $this->field = null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function fieldIsPresent(): bool {
+        return !empty($this->field);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    function getTitle(): string {
+        if (!$this->fieldIsPresent()) {
+            return 'Undefined';
+        }
+        return $this->field->getTitle();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    function getIdentifier(): string {
+        if (!$this->fieldIsPresent()) {
+            return 'undefined';
+        }
+        return $this->field->getIdentifier();
+    }
+
+    /**
+     * Basic settings validation based on self::SETTINGS and self::REQUIRED_SETTINGS constants. More sophisticated
+     * validation should be done in child implementations.
+     *
+     * @param FieldableFieldSettings $settings
+     * @return array
+     */
     function validateSettings(FieldableFieldSettings $settings): array
     {
         $violations = [];
@@ -152,5 +171,25 @@ abstract class FieldType implements FieldTypeInterface
         }
 
         return $violations;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    function validateData($data): array {
+        return [];
+    }
+
+    protected function createViolation($message, $messageTemplate = null, $parameters = [], $root = null, string $propertyPath = null, $invalidValue = null, $plural = null) {
+
+        if(!$messageTemplate) {
+            $messageTemplate = $message;
+        }
+
+        if(!$propertyPath) {
+            $propertyPath = '[' . $this->getIdentifier() . ']';
+        }
+
+        return new ConstraintViolation($message, $messageTemplate, $parameters, $root, $propertyPath, $invalidValue, $plural);
     }
 }

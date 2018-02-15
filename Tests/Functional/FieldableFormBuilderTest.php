@@ -33,11 +33,13 @@ class FieldableFormBuilderTest extends ContainerAwareTestCase
                     public function getType() { return 'text'; }
                     public function getIdentifier() { return 'field1'; }
                     public function getTitle() { return 'Field 1'; }
+                    public function getSettings() { return []; }
                 }];
             }
             public function setFields($fields) {}
             public function addField(FieldableField $field) {}
             public function getLocales(): array { return []; }
+            public function getIdentifier() { return ''; }
         };
         $content = new class implements FieldableContent {
             private $data = ['field1' => 'Any Value'];

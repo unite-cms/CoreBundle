@@ -2,7 +2,6 @@
 
 namespace UnitedCMS\CoreBundle\Field\Types;
 
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use UnitedCMS\CoreBundle\Field\FieldType;
 

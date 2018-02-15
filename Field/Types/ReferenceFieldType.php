@@ -4,18 +4,17 @@ namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Doctrine\ORM\EntityManager;
 use Symfony\Bridge\Twig\TwigEngine;
-use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\InvalidArgumentException;
 use Symfony\Component\Security\Core\Authorization\AuthorizationChecker;
-use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Form\ReferenceType;
 use UnitedCMS\CoreBundle\View\ViewTypeInterface;
 use UnitedCMS\CoreBundle\View\ViewTypeManager;
 use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Entity\ContentType;
 use UnitedCMS\CoreBundle\Entity\Domain;
 use UnitedCMS\CoreBundle\Field\FieldType;
-use UnitedCMS\CoreBundle\Form\WebComponentType;
 use UnitedCMS\CoreBundle\Security\ContentVoter;
 use UnitedCMS\CoreBundle\Security\DomainVoter;
 use UnitedCMS\CoreBundle\Service\UnitedCMSManager;
@@ -24,7 +23,7 @@ use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
 class ReferenceFieldType extends FieldType
 {
     const TYPE                      = "reference";
-    const FORM_TYPE                 = WebComponentType::class;
+    const FORM_TYPE                 = ReferenceType::class;
     const SETTINGS                  = ['domain', 'content_type', 'view', 'content_label'];
     const REQUIRED_SETTINGS         = ['domain', 'content_type'];
 
@@ -35,8 +34,7 @@ class ReferenceFieldType extends FieldType
     private $entityManager;
     private $templating;
 
-    function __construct(ValidatorInterface $validator, AuthorizationChecker $authorizationChecker, UnitedCMSManager $unitedCMSManager, EntityManager $entityManager, ViewTypeManager $viewTypeManager, TwigEngine $templating)
-    {
+    function __construct(ValidatorInterface $validator, AuthorizationChecker $authorizationChecker, UnitedCMSManager $unitedCMSManager, EntityManager $entityManager, ViewTypeManager $viewTypeManager, TwigEngine $templating) {
         $this->validator = $validator;
         $this->authorizationChecker = $authorizationChecker;
         $this->unitedCMSManager = $unitedCMSManager;
@@ -45,56 +43,77 @@ class ReferenceFieldType extends FieldType
         $this->templating = $templating;
     }
 
-    function getFormOptions(): array
-    {
-        $settings = $this->field->getSettings();
-        $settings->view = $settings->view ?? 'all';
+    /**
+     * Resolves an content type and checks permission for the domain.
+     *
+     * @param string $domain_identifier
+     * @param string $content_type_identifier
+     * @return ContentType
+     */
+    private function resolveContentType($domain_identifier, $content_type_identifier) : ContentType {
 
+        if(!$domain_identifier || !$content_type_identifier) {
+            throw new InvalidArgumentException("You must pass a domain and content_type identifier.");
+        }
+
+        // Only allow to resolve a content type from the same organization.
         $organization = $this->unitedCMSManager->getOrganization();
 
-        $domain = $organization->getDomains()->filter(function( Domain $domain ) use($settings) { return $domain->getIdentifier() == $settings->domain; })->first();
+        $domain = $organization->getDomains()->filter(function( Domain $domain ) use($domain_identifier) { return $domain->getIdentifier() == $domain_identifier; })->first();
 
         if(!$domain) {
-            throw new InvalidArgumentException("No domain with identifier '{$settings->domain}' was found in this organization.");
+            throw new InvalidArgumentException("No domain with identifier '{$domain_identifier}' was found in this organization.");
         }
 
         if(!$this->authorizationChecker->isGranted(DomainVoter::VIEW, $domain)) {
             throw new InvalidArgumentException("You are not allowed to view this domain.");
         }
 
-        $contentType = $domain->getContentTypes()->filter(function( ContentType $contentType ) use($settings) { return $contentType->getIdentifier() == $settings->content_type; })->first();
+        $contentType = $domain->getContentTypes()->filter(function( ContentType $contentType ) use($content_type_identifier) { return $contentType->getIdentifier() == $content_type_identifier; })->first();
 
         if(!$contentType) {
-            throw new InvalidArgumentException("No content_Type with identifier '{$settings->content_type}' was found for this organization and domain.");
+            throw new InvalidArgumentException("No content_type with identifier '{$content_type_identifier}' was found for this organization and domain.");
         }
 
+        return $contentType;
+    }
+
+    /**
+     * @return array
+     * @throws \Twig\Error\Error|InvalidArgumentException
+     */
+    function getFormOptions(): array
+    {
+        $settings = $this->field->getSettings();
+        $settings->view = $settings->view ?? 'all';
+
+        // Get content type and check if we have access to it.
+        $contentType = $this->resolveContentType($settings->domain, $settings->content_type);
         if(!$this->authorizationChecker->isGranted(ContentVoter::LIST, $contentType)) {
             throw new InvalidArgumentException("You are not allowed to view this content_type.");
         }
 
+        // Get view.
         $view = $contentType->getViews()->filter(function( View $view) use($settings) { return $view->getIdentifier() == $settings->view; })->first();
-
         if(!$view) {
             throw new InvalidArgumentException("No view with identifier '{$settings->view}' was found for this organization, domain and content type.");
         }
 
-        // Reload the full view object
+        // Reload the full view object.
         $view = $this->entityManager->getRepository('UnitedCMSCoreBundle:View')->findOneBy([
             'contentType' => $contentType,
             'id' => $view->getId(),
         ]);
 
-        $settings->content_label = $settings->content_label ?? ucfirst($contentType->getTitle()) . '# {id}';
-
+        // Pass the rendered view HTML and other parameters as a form option.
         return array_merge(parent::getFormOptions(), [
-            'tag' => 'united-cms-core-reference-field',
             'empty_data' => [
-                'domain' => $domain->getIdentifier(),
+                'domain' => $contentType->getDomain()->getIdentifier(),
                 'content_type' => $contentType->getIdentifier(),
             ],
             'attr' => [
                 'base-url' => '/' . $this->unitedCMSManager->getOrganization() . '/',
-                'content-label' => $settings->content_label,
+                'content-label' => $settings->content_label ?? ucfirst($contentType->getTitle()) . '# {id}',
                 'modal-html' => $this->templating->render(
                     $this->viewTypeManager->getViewType($view->getType())::getTemplate(),
                     [
@@ -106,73 +125,49 @@ class ReferenceFieldType extends FieldType
         ]);
     }
 
-    function getDataTransformer() {
-        return new class implements DataTransformerInterface {
-            public function transform($value)
-            {
-                return $value;
-            }
+    /**
+     * {@inheritdoc}
+     */
+    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
 
-            public function reverseTransform($value)
-            {
-                if(empty($value) || empty($value['content'])) {
-                    return null;
-                }
-
-                return $value;
-            }
-        };
-    }
-
-    function getGraphQLType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
-    {
         $name = ucfirst($this->field->getSettings()->content_type . 'Content');
+
         if($nestingLevel > 0) {
             $name .= 'Level' . $nestingLevel;
         }
 
-        // We use the default content in view factory to build the type.
+        // We use the default content factory to build the type.
         return $schemaTypeManager->getSchemaType($name, $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 
-    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0)
-    {
+    /**
+     * {@inheritdoc}
+     */
+    function getGraphQLInputType(SchemaTypeManager $schemaTypeManager, $nestingLevel = 0) {
         return $schemaTypeManager->getSchemaType('ReferenceFieldTypeInput', $this->unitedCMSManager->getDomain(), $nestingLevel);
     }
 
-    function resolveGraphQLData($value)
-    {
+    /**
+     * Resolve reference data. This means getting the referenced entity, checking access and returning it.
+     *
+     * @param array $value
+     * @throws InvalidArgumentException
+     * @return null|Content
+     */
+    function resolveGraphQLData($value) {
         if(empty($value)) {
             return null;
         }
 
-        $organization = $this->unitedCMSManager->getOrganization();
+        $contentType = $this->resolveContentType($value['domain'], $value['content_type']);
 
-        $domain = $organization->getDomains()->filter(function( Domain $domain ) use($value) { return $domain->getIdentifier() == $value['domain']; })->first();
-
-        if(!$domain) {
-            throw new InvalidArgumentException("No domain with identifier '{$value['domain']}' was found in this organization.");
-        }
-
-        if(!$this->authorizationChecker->isGranted(DomainVoter::VIEW, $domain)) {
-            throw new InvalidArgumentException("You are not allowed to view this domain.");
-        }
-
-        $contentType = $domain->getContentTypes()->filter(function( ContentType $contentType ) use($value) { return $contentType->getIdentifier() == $value['content_type']; })->first();
-
-        if(!$contentType) {
-            throw new InvalidArgumentException("No content_Type with identifier '{$value['content_type']}' was found for this organization and domain.");
-        }
-
-        $content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->findOneBy([
-            'contentType' => $contentType,
-            'id' => $value['content'],
-        ]);
-
+        // Find content for this content type.
+        $content = $this->entityManager->getRepository('UnitedCMSCoreBundle:Content')->findOneBy(['contentType' => $contentType, 'id' => $value['content']]);
         if(!$content) {
             throw new InvalidArgumentException("No content with id '{$value['content']}' was found.");
         }
 
+        // Check access to view content.
         if(!$this->authorizationChecker->isGranted(ContentVoter::VIEW, $content)) {
             throw new InvalidArgumentException("You are not allowed to view this content.");
         }
@@ -180,23 +175,20 @@ class ReferenceFieldType extends FieldType
         return $content;
     }
 
-    function validateData($data): array
-    {
+    /**
+     * {@inheritdoc}
+     */
+    function validateData($data): array {
         $violations = [];
 
+        // Only validate available data.
         if(empty($data)) {
             return $violations;
         }
 
+        // Make sure, that all required fields are set.
         if(empty($data['domain']) || empty($data['content_type']) || empty($data['content'])) {
-            $violations[] = new ConstraintViolation(
-                'validation.missing_definition',
-                'validation.missing_definition',
-                [],
-                null,
-                '[' . $this->getIdentifier() . ']',
-                $data
-            );
+            $violations[] = $this->createViolation('validation.missing_definition');
         }
 
         // Try to resolve the data to check if the current user is allowed to access it.
@@ -204,14 +196,7 @@ class ReferenceFieldType extends FieldType
             try {
                 $this->resolveGraphQLData($data);
             } catch (InvalidArgumentException $e) {
-                $violations[] = new ConstraintViolation(
-                    'validation.wrong_definition',
-                    'validation.wrong_definition',
-                    [],
-                    null,
-                    '[' . $this->getIdentifier() . ']',
-                    $data
-                );
+                $violations[] = $this->createViolation('validation.wrong_definition');
             }
         }
 

@@ -1,6 +1,7 @@
 <?php
 
 namespace UnitedCMS\CoreBundle\Entity;
+use UnitedCMS\CoreBundle\Field\FieldableFieldSettings;
 
 /**
  * Defines a fieldable entity.
@@ -34,4 +35,9 @@ interface FieldableField
      * @return string
      */
     public function getTitle();
+
+    /**
+     * @return null|FieldableFieldSettings
+     */
+    public function getSettings();
 }

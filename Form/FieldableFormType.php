@@ -43,12 +43,6 @@ class FieldableFormType extends AbstractType
                 $field->getFieldType()->getFormType(),
                 $field->getFieldType()->getFormOptions()
             );
-
-            // Allow the field type to add a data transformer.
-            if($transformer = $field->getFieldType()->getDataTransformer()) {
-                $builder->get($field->getFieldType()->getIdentifier())->addModelTransformer($transformer);
-            }
-
             $field->getFieldType()->unsetEntityField();
         }
     }
