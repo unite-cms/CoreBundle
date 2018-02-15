@@ -34,4 +34,10 @@ abstract class ContainerAwareTestCase extends KernelTestCase
         $kernel = static::bootKernel(['debug' => false]);
         $this->container = $kernel->getContainer();
     }
+
+    public function tearDown()
+    {
+        parent::tearDown();
+        $this->container = null;
+    }
 }
