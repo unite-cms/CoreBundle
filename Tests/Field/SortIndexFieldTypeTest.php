@@ -161,6 +161,4 @@ class SortIndexFieldTypeTest extends FieldTypeTestCase
         $this->assertEquals(['position' => 2, 'label' => 'C2'], $getContent[2]->getData());
         $this->assertEquals(['position' => 3, 'label' => 'C4'], $getContent[3]->getData());
     }
-
-
 }

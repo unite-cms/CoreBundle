@@ -32,6 +32,12 @@ interface FieldableField
     public function getIdentifier();
 
     /**
+     * Returns the identifier, used for mysql's json_extract function.
+     * @return string
+     */
+    public function getJsonExtractIdentifier();
+
+    /**
      * @return string
      */
     public function getTitle();

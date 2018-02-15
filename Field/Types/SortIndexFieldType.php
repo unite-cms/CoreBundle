@@ -3,11 +3,10 @@
 namespace UnitedCMS\CoreBundle\Field\Types;
 
 use Doctrine\ORM\EntityRepository;
-use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
-use Doctrine\ORM\Event\PreUpdateEventArgs;
 use GraphQL\Type\Definition\Type;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\FieldableContent;
 use UnitedCMS\CoreBundle\Entity\FieldableField;
 use UnitedCMS\CoreBundle\Field\FieldType;
 use UnitedCMS\CoreBundle\SchemaType\SchemaTypeManager;
@@ -26,91 +25,91 @@ class SortIndexFieldType extends FieldType
         return Type::int();
     }
 
-    public function onContentInsert(FieldableField $field, Content $content, EntityRepository $repository, LifecycleEventArgs $args) {
-        // Set the position of the new item to max position.
-        $data = $content->getData();
+    public function onCreate(FieldableField $field, Content $content, EntityRepository $repository, &$data) {
         $data[$field->getIdentifier()] = $repository->count(['contentType' => $content->getContentType()]);
-        $content->setData($data);
     }
 
-    public function onContentUpdate(FieldableField $field, Content $content, EntityRepository $repository, PreUpdateEventArgs $args) {
+    public function onUpdate(FieldableField $field, FieldableContent $content, EntityRepository $repository, $old_data, &$data) {
+        if($content instanceof Content) {
 
-        $fieldIdentifier = $field->getIdentifier();
+            // if we recover a deleted content, it's like we are moving the item from the end of the list to its original position.
+            $originalPosition = null;
 
-        // if we recover a deleted content, it's like we are moving the item from the end of the list to its original position.
-        $originalPosition = null;
+            // Get the old position, if available.
 
-        // Get the old position, if available.
+            if(isset($old_data[$field->getIdentifier()])) {
+                $originalPosition = $old_data[$field->getIdentifier()];
+            }
 
-        if($args->hasChangedField('data')) {
-            $originalPosition = $args->getOldValue('data')[$fieldIdentifier];
-        }
+            // Get new position.
+            $updatedPosition = $data[$field->getIdentifier()];
 
-        // Get new position.
-        $updatedPosition = $content->getData()[$fieldIdentifier];
+            // If we shift left, all items in between must be shifted right.
+            if($originalPosition !== null && $originalPosition > $updatedPosition) {
 
-        // If we shift left, all items in between must be shifted right.
-        if($originalPosition !== null && $originalPosition > $updatedPosition) {
+                $repository->createQueryBuilder('c')
+                    ->update('UnitedCMSCoreBundle:Content', 'c')
+                    ->set('c.data', "JSON_SET(c.data, :identifier, CAST(JSON_EXTRACT(c.data, :identifier) +1 AS int))")
+                    ->where('c.contentType = :contentType')
+                    ->andWhere("JSON_EXTRACT(c.data, :identifier) BETWEEN :first AND :last")
+                    ->setParameters([
+                        'identifier' => $field->getJsonExtractIdentifier(),
+                        ':contentType' => $content->getContentType(),
+                        ':first' => $updatedPosition,
+                        ':last' => $originalPosition - 1,
+                    ])
+                    ->getQuery()->execute();
 
-            $repository->createQueryBuilder('c')
-                ->update('UnitedCMSCoreBundle:Content', 'c')
-                ->set('c.data', "JSON_SET(c.data, '$.$fieldIdentifier', CAST(JSON_EXTRACT(c.data, '$.$fieldIdentifier') +1 AS int))")
-                ->where('c.contentType = :contentType')
-                ->andWhere("JSON_EXTRACT(c.data, '$.$fieldIdentifier') BETWEEN :first AND :last")
-                ->setParameters([
-                    ':contentType' => $content->getContentType(),
-                    ':first' => $updatedPosition,
-                    ':last' => $originalPosition - 1,
-                ])
-                ->getQuery()->execute();
+            }
 
-        }
+            // if we shift right, all items in between must be shifted left.
+            if($originalPosition !== null && $originalPosition < $updatedPosition) {
 
-        // if we shift right, all items in between must be shifted left.
-        if($originalPosition !== null && $originalPosition < $updatedPosition) {
+                $repository->createQueryBuilder('c')
+                    ->update('UnitedCMSCoreBundle:Content', 'c')
+                    ->set('c.data', "JSON_SET(c.data, :identifier, CAST(JSON_EXTRACT(c.data, :identifier) -1 AS int))")
+                    ->where('c.contentType = :contentType')
+                    ->andWhere("JSON_EXTRACT(c.data, :identifier) BETWEEN :first AND :last")
+                    ->setParameters([
+                        'identifier' => $field->getJsonExtractIdentifier(),
+                        ':contentType' => $content->getContentType(),
+                        ':first' => $originalPosition + 1,
+                        ':last' => $updatedPosition,
+                    ])
+                    ->getQuery()->execute();
+            }
 
-            $repository->createQueryBuilder('c')
-                ->update('UnitedCMSCoreBundle:Content', 'c')
-                ->set('c.data', "JSON_SET(c.data, '$.$fieldIdentifier', CAST(JSON_EXTRACT(c.data, '$.$fieldIdentifier') -1 AS int))")
-                ->where('c.contentType = :contentType')
-                ->andWhere("JSON_EXTRACT(c.data, '$.$fieldIdentifier') BETWEEN :first AND :last")
-                ->setParameters([
-                    ':contentType' => $content->getContentType(),
-                    ':first' => $originalPosition + 1,
-                    ':last' => $updatedPosition,
-                ])
-                ->getQuery()->execute();
-        }
+            // If we have no originalPosition, for example if we recover a deleted content.
+            if($originalPosition === null) {
 
-        // If we have no originalPosition, for example if we recover a deleted content.
-        if($originalPosition === null) {
+                $repository->createQueryBuilder('c')
+                    ->update('UnitedCMSCoreBundle:Content', 'c')
+                    ->set('c.data', "JSON_SET(c.data, :identifier, CAST(JSON_EXTRACT(c.data, :identifier) +1 AS int))")
+                    ->where('c.contentType = :contentType')
+                    ->andWhere("JSON_EXTRACT(c.data, :identifier) >= :first")
+                    ->setParameters([
+                        'identifier' => $field->getJsonExtractIdentifier(),
+                        ':contentType' => $content->getContentType(),
+                        ':first' => $updatedPosition,
+                    ])
+                    ->getQuery()->execute();
+            }
 
-            $repository->createQueryBuilder('c')
-                ->update('UnitedCMSCoreBundle:Content', 'c')
-                ->set('c.data', "JSON_SET(c.data, '$.$fieldIdentifier', CAST(JSON_EXTRACT(c.data, '$.$fieldIdentifier') +1 AS int))")
-                ->where('c.contentType = :contentType')
-                ->andWhere("JSON_EXTRACT(c.data, '$.$fieldIdentifier') >= :first")
-                ->setParameters([
-                    ':contentType' => $content->getContentType(),
-                    ':first' => $updatedPosition,
-                ])
-                ->getQuery()->execute();
         }
     }
 
-    public function onContentRemove(FieldableField $field, Content $content, EntityRepository $repository, LifecycleEventArgs $args) {
-
-        $fieldIdentifier = $field->getIdentifier();
+    public function onSoftDelete(FieldableField $field, Content $content, EntityRepository $repository, $data) {
 
         // all content after the deleted one should get --.
         $repository->createQueryBuilder('c')
             ->update('UnitedCMSCoreBundle:Content', 'c')
-            ->set('c.data', "JSON_SET(c.data, '$.$fieldIdentifier', CAST(JSON_EXTRACT(c.data, '$.$fieldIdentifier') -1 AS int))")
+            ->set('c.data', "JSON_SET(c.data, :identifier, CAST(JSON_EXTRACT(c.data, :identifier) -1 AS int))")
             ->where('c.contentType = :contentType')
-            ->andWhere("JSON_EXTRACT(c.data, '$.$fieldIdentifier') > :last")
+            ->andWhere("JSON_EXTRACT(c.data, :identifier) > :last")
             ->setParameters([
+                'identifier' => $field->getJsonExtractIdentifier(),
                 ':contentType' => $content->getContentType(),
-                ':last' => $content->getData()[$fieldIdentifier],
+                ':last' => $data[$field->getIdentifier()],
             ])
             ->getQuery()->execute();
     }

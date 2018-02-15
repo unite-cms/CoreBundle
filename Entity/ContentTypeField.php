@@ -193,6 +193,15 @@ class ContentTypeField implements FieldableField
     }
 
     /**
+     * Returns the identifier, used for mysql's json_extract function.
+     * @return string
+     */
+    public function getJsonExtractIdentifier()
+    {
+        return '$.' . $this->getIdentifier();
+    }
+
+    /**
      * Set type
      *
      * @param string $type

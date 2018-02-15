@@ -8,6 +8,8 @@ use Symfony\Component\Validator\ConstraintViolation;
 use UnitedCMS\CoreBundle\Entity\Content;
 use UnitedCMS\CoreBundle\Entity\ContentTypeField;
 use UnitedCMS\CoreBundle\Entity\FieldableField;
+use UnitedCMS\CoreBundle\Entity\Setting;
+use UnitedCMS\CoreBundle\Entity\SettingTypeField;
 
 class FieldTypeManager
 {
@@ -68,23 +70,41 @@ class FieldTypeManager
 
     public function onContentInsert(ContentTypeField $field, Content $content, LifecycleEventArgs $args) {
         $fieldType = $this->getFieldType($field->getType());
-
-        if(method_exists($fieldType, 'onContentInsert')) {
-            $fieldType->onContentInsert($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
+        if(method_exists($fieldType, 'onCreate')) {
+            $data = $content->getData();
+            $fieldType->onCreate($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $data);
+            $content->setData($data);
         }
     }
 
     public function onContentUpdate(ContentTypeField $field, Content $content, PreUpdateEventArgs $args) {
         $fieldType = $this->getFieldType($field->getType());
-        if(method_exists($fieldType, 'onContentUpdate')) {
-            $fieldType->onContentUpdate($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
+        if(method_exists($fieldType, 'onUpdate')) {
+            $data = $content->getData();
+            $old_data = $args->hasChangedField('data') ?? [];
+            $fieldType->onUpdate($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $old_data, $data);
+            $content->setData($data);
+        }
+    }
+
+    public function onSettingUpdate(SettingTypeField $field, Setting $setting, PreUpdateEventArgs $args) {
+        $fieldType = $this->getFieldType($field->getType());
+        if(method_exists($fieldType, 'onUpdate')) {
+            $data = $setting->getData();
+            $fieldType->onUpdate($field, $setting, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Setting'), $args->getOldValue('data'), $data);
+            $setting->setData($data);
         }
     }
 
     public function onContentRemove(ContentTypeField $field, Content $content, LifecycleEventArgs $args) {
         $fieldType = $this->getFieldType($field->getType());
-        if(method_exists($fieldType, 'onContentRemove')) {
-            $fieldType->onContentRemove($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $args);
+
+        if(method_exists($fieldType, 'onSoftDelete') && !$content->getDeleted()) {
+            $fieldType->onSoftDelete($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $content->getData());
+        }
+
+        if(method_exists($fieldType, 'onHardDelete') && $content->getDeleted()) {
+            $fieldType->onHardDelete($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $content->getData());
         }
     }
 

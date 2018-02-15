@@ -11,6 +11,7 @@ namespace UnitedCMS\CoreBundle\Subscriber;
 use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use UnitedCMS\CoreBundle\Entity\Content;
+use UnitedCMS\CoreBundle\Entity\Setting;
 use UnitedCMS\CoreBundle\Field\FieldTypeManager;
 
 class ContentEventDispatcher
@@ -43,6 +44,13 @@ class ContentEventDispatcher
         if ($entity instanceof Content) {
             foreach($entity->getContentType()->getFields() as $field) {
                 $this->fieldTypeManager->onContentUpdate($field, $entity, $args);
+            }
+        }
+
+        // Notify all field types about an update event.
+        if ($entity instanceof Setting) {
+            foreach($entity->getSettingType()->getFields() as $field) {
+                $this->fieldTypeManager->onSettingUpdate($field, $entity, $args);
             }
         }
 
