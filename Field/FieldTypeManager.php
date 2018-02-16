@@ -81,7 +81,7 @@ class FieldTypeManager
         $fieldType = $this->getFieldType($field->getType());
         if(method_exists($fieldType, 'onUpdate')) {
             $data = $content->getData();
-            $old_data = $args->hasChangedField('data') ?? [];
+            $old_data = $args->hasChangedField('data') ? $args->getOldValue('data') : [];
             $fieldType->onUpdate($field, $content, $args->getObjectManager()->getRepository('UnitedCMSCoreBundle:Content'), $old_data, $data);
             $content->setData($data);
         }
