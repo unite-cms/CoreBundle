@@ -150,8 +150,8 @@ class ReferenceFieldType extends FieldType
     /**
      * Resolve reference data. This means getting the referenced entity, checking access and returning it.
      *
+     * @param FieldableField $field
      * @param array $value
-     * @throws InvalidArgumentException
      * @return null|Content
      */
     function resolveGraphQLData(FieldableField $field, $value) {
@@ -178,7 +178,13 @@ class ReferenceFieldType extends FieldType
     /**
      * {@inheritdoc}
      */
-    function validateData(FieldableField $field, $data): array {
+    function validateData(FieldableField $field, $data, $validation_group = 'DEFAULT'): array {
+
+        // When deleting content, we don't need to validate data.
+        if($validation_group === 'DELETE') {
+            return [];
+        }
+
         $violations = [];
 
         // Only validate available data.
