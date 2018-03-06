@@ -70,10 +70,6 @@ class TableViewType extends ViewType
     {
         $violations = parent::validateSettings($settings);
 
-        if(!empty($violations)) {
-            return $violations;
-        }
-
         // Only continue, if all required settings are available and there are no additional settings.
         if(!empty($violations)) {
             return $violations;
