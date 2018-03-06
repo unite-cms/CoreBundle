@@ -6,7 +6,6 @@ use Doctrine\ORM\Query\QueryException;
 use Doctrine\ORM\Query\Expr;
 use Doctrine\ORM\Query\Expr\Andx;
 use Doctrine\ORM\Query\Expr\Comparison;
-use Doctrine\ORM\Query\Expr\Func;
 use Doctrine\ORM\Query\Expr\Orx;
 
 /**
@@ -42,6 +41,7 @@ class GraphQLDoctrineFilterQueryBuilder
      * @param array $filterInput
      * @param array $contentEntityFields
      * @param string $contentEntityPrefix
+     * @throws QueryException
      */
     public function __construct(array $filterInput, $contentEntityFields = [], $contentEntityPrefix)
     {
@@ -54,7 +54,7 @@ class GraphQLDoctrineFilterQueryBuilder
     /**
      * Returns the doctrine filter object.
      *
-     * @return Comparison|Orx|null
+     * @return Comparison|Orx|Andx|string|null
      */
     public function getFilter() {
         return $this->filter;
@@ -84,6 +84,11 @@ class GraphQLDoctrineFilterQueryBuilder
 
             $filters = [];
             foreach($filterInput['AND'] as $filter) {
+
+                if(!is_array($filter)) {
+                    throw new \InvalidArgumentException('AND operator expects an array of filters.');
+                }
+
                 $filters[] = $this->getQueryBuilderComposite($filter);
             }
             return new Andx($filters);
@@ -93,6 +98,11 @@ class GraphQLDoctrineFilterQueryBuilder
 
             $filters = [];
             foreach($filterInput['OR'] as $filter) {
+
+                if(!is_array($filter)) {
+                    throw new \InvalidArgumentException('OR operator expects an array of filters.');
+                }
+
                 $filters[] = $this->getQueryBuilderComposite($filter);
             }
             return new Orx($filters);
