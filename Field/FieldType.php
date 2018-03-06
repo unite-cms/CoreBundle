@@ -146,7 +146,7 @@ abstract class FieldType implements FieldTypeInterface
     /**
      * {@inheritdoc}
      */
-    function validateData(FieldableField $field, $data): array {
+    function validateData(FieldableField $field, $data, $validation_group = 'DEFAULT'): array {
         return [];
     }
 

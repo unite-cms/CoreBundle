@@ -68,7 +68,7 @@ class SettingEntityTest extends DatabaseAwareTestCase
         {
             const TYPE = "setting_entity_test_mocked_field";
 
-            function validateData(FieldableField $field, $data): array
+            function validateData(FieldableField $field, $data, $validation_group = 'DEFAULT'): array
             {
                 if ($data) {
                     return [

@@ -68,9 +68,9 @@ class ContentEntityTest extends DatabaseAwareTestCase
         {
             const TYPE = "content_entity_test_mocked_field";
 
-            function validateData(FieldableField $field, $data): array
+            function validateData(FieldableField $field, $data, $validation_group = 'DEFAULT'): array
             {
-                if ($data) {
+                if ($data && $validation_group !== 'DELETE') {
                     return [
                         new ConstraintViolation(
                             'mocked_message',
@@ -103,6 +103,65 @@ class ContentEntityTest extends DatabaseAwareTestCase
         $this->assertCount(1, $errors);
         $this->assertEquals('data.invalid', $errors->get(0)->getPropertyPath());
         $this->assertEquals('mocked_message', $errors->get(0)->getMessage());
+
+        // 2.1 Validate DELETE on invalid content should be valid.
+        $content = new Content();
+        $content->setContentType($ct)->setData(['invalid' => true]);
+        $this->assertCount(0, $this->container->get('validator')->validate($content, null, 'DELETE'));
+
+        // 3. Create Content that is valid with FieldType. => VALID
+        $content->setData(['invalid' => false]);
+        $this->assertCount(0, $this->container->get('validator')->validate($content));
+    }
+
+    public function testValidateDeleteContentDataValidation()
+    {
+
+        // 1. Create Content Type with 1 moked FieldType
+        $mockedFieldType = new Class extends FieldType
+        {
+            const TYPE = "content_entity_test_mocked_field";
+
+            function validateData(FieldableField $field, $data, $validation_group = 'DEFAULT'): array
+            {
+                if ($data && $validation_group === 'DELETE') {
+                    return [
+                        new ConstraintViolation(
+                            'mocked_message',
+                            'mocked_message',
+                            [],
+                            $data,
+                            'invalid',
+                            $data
+                        ),
+                    ];
+                }
+
+                return [];
+            }
+        };
+
+        // Inject the field type
+        $this->container->get('united.cms.field_type_manager')->registerFieldType($mockedFieldType);
+
+        $ct = new ContentType();
+        $field = new ContentTypeField();
+        $field->setType('content_entity_test_mocked_field')->setIdentifier('invalid')->setTitle('Title');
+        $ct->setTitle('Ct1')->setIdentifier('ct1')->addField($field);
+
+
+        // 2. Create Content that is invalid with FieldType. => INVALID (at path)
+        $content = new Content();
+        $content->setContentType($ct)->setData(['invalid' => true]);
+        $errors = $this->container->get('validator')->validate($content, null, ['DELETE']);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('data.invalid', $errors->get(0)->getPropertyPath());
+        $this->assertEquals('mocked_message', $errors->get(0)->getMessage());
+
+        // 2.1 Validate DEFAULT on invalid content should be valid.
+        $content = new Content();
+        $content->setContentType($ct)->setData(['invalid' => true]);
+        $this->assertCount(0, $this->container->get('validator')->validate($content));
 
         // 3. Create Content that is valid with FieldType. => VALID
         $content->setData(['invalid' => false]);

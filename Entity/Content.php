@@ -50,7 +50,7 @@ class Content implements FieldableContent
 
     /**
      * @var array
-     * @ValidFieldableContentData(additionalDataMessage="validation.additional_data")
+     * @ValidFieldableContentData(additionalDataMessage="validation.additional_data", groups={"Default", "DELETE"})
      * @Gedmo\Versioned
      * @ORM\Column(name="data", type="json", nullable=true)
      */
