@@ -2,6 +2,10 @@
 
 namespace UnitedCMS\CoreBundle\View\Types;
 
+use Doctrine\ORM\Query\QueryException;
+use Symfony\Component\Validator\ConstraintViolation;
+use UnitedCMS\CoreBundle\Service\GraphQLDoctrineFilterQueryBuilder;
+use UnitedCMS\CoreBundle\View\ViewSettings;
 use UnitedCMS\CoreBundle\View\ViewType;
 
 class TableViewType extends ViewType
@@ -16,6 +20,9 @@ class TableViewType extends ViewType
         "filter",
     ];
 
+    /**
+     * {@inheritdoc}
+     */
     function getTemplateRenderParameters(string $selectMode = self::SELECT_MODE_NONE): array
     {
         $columns = $this->view->getSettings()->columns ?? [];
@@ -54,5 +61,114 @@ class TableViewType extends ViewType
             'View' => $this->view->getIdentifier(),
             'contentType' => $this->view->getContentType()->getIdentifier(),
         ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    function validateSettings(ViewSettings $settings): array
+    {
+        $violations = parent::validateSettings($settings);
+
+        if(!empty($violations)) {
+            return $violations;
+        }
+
+        // Only continue, if all required settings are available and there are no additional settings.
+        if(!empty($violations)) {
+            return $violations;
+        }
+
+        // validate setting structure.
+        if(!empty($settings->columns) && !is_array($settings->columns)) {
+            $violations[] = $this->createInvalidSettingDefinitionConstraint($settings,'columns');
+        }
+        if(!empty($settings->sort_field) && !is_string($settings->sort_field)) {
+            $violations[] = $this->createInvalidSettingDefinitionConstraint($settings,'sort_field');
+        }
+
+        if(!empty($settings->sort_asc) && !is_bool($settings->sort_asc)) {
+            $violations[] = $this->createInvalidSettingDefinitionConstraint($settings,'sort_asc');
+        }
+        if(!empty($settings->filter)) {
+            if(!is_array($settings->filter)) {
+                $violations[] = $this->createInvalidSettingDefinitionConstraint($settings,'filter');
+            } else {
+
+                // Make sure, that there arr only allowed filter fields.
+                if(!empty(array_diff(array_keys($settings->filter), ['AND', 'OR', 'field', 'value', 'operator']))) {
+                    $violations[] = $this->createInvalidSettingDefinitionConstraint($settings,'filter');
+                } else {
+
+                    $filter_structure = null;
+
+                    try {
+                        $filter_structure = new GraphQLDoctrineFilterQueryBuilder($settings->filter, [], 'c');
+                    } catch (\Exception $e) {
+                        $violations[] = $this->createInvalidSettingDefinitionConstraint($settings, 'filter');
+                    }
+
+                    // Validate filter structure.
+                    if ($filter_structure) {
+
+                        if (!$filter_structure->getFilter()) {
+                            $violations[] = $this->createInvalidSettingDefinitionConstraint($settings, 'filter');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Only continue, if all setting properties have correct type.
+        if(!empty($violations)) {
+            return $violations;
+        }
+
+        // Validate column fields.
+        if(!empty($settings->columns)) {
+            foreach ($settings->columns as $field => $label) {
+                if (!$this->content_type_contains_field($field)) {
+                    $violations[] = $this->createUnknownColumnConstraint($settings, 'columns.' . $field);
+                }
+            }
+        }
+
+        // Validate sort_field.
+        if(!empty($settings->sort_field)) {
+            if(!$this->content_type_contains_field($settings->sort_field)) {
+                $violations[] = $this->createUnknownColumnConstraint($settings, 'sort_field');
+            }
+        }
+
+        return $violations;
+    }
+
+    private function createInvalidSettingDefinitionConstraint($settings, $property) {
+        return new ConstraintViolation(
+            "validation.invalid_{$property}_definition",
+            "validation.invalid_{$property}_definition",
+            [],
+            $settings,
+            $property,
+            $settings
+        );
+    }
+
+    private function createUnknownColumnConstraint($settings, $property_path) {
+        return new ConstraintViolation(
+            "validation.unknown_column",
+            "validation.unknown_column",
+            [],
+            $settings,
+            $property_path,
+            $settings
+        );
+    }
+
+    private function content_type_contains_field($field) {
+        if(in_array($field, ['id', 'locale', 'created', 'updated', 'deleted'])) {
+            return true;
+        }
+        return $this->view->getContentType()->getFields()->containsKey($field);
     }
 }

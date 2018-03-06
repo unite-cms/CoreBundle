@@ -2,6 +2,7 @@
 
 namespace UnitedCMS\CoreBundle\Tests\View;
 
+use UnitedCMS\CoreBundle\Entity\ContentTypeField;
 use UnitedCMS\CoreBundle\View\ViewSettings;
 use UnitedCMS\CoreBundle\Entity\View;
 use UnitedCMS\CoreBundle\Entity\ContentType;
@@ -71,6 +72,10 @@ class TableViewTypeTest extends DatabaseAwareTestCase
             ->setTitle('O1')
             ->setIdentifier('o1');
 
+        $field = new ContentTypeField();
+        $field->setType('text')->setIdentifier('f1')->setTitle('F1');
+        $view->getContentType()->addField($field);
+
         $view->setSettings(new ViewSettings([
             'foo' => 'baa',
         ]));
@@ -79,6 +84,86 @@ class TableViewTypeTest extends DatabaseAwareTestCase
         $errors = $this->container->get('validator')->validate($view);
         $this->assertCount(1, $errors);
         $this->assertEquals('validation.additional_data', $errors->get(0)->getMessage());
+
+        $view->setSettings(new ViewSettings([]));
+
+        // Test validating invalid columns.
+        $view->setSettings(new ViewSettings(['columns' => 'string']));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_columns_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.columns', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['columns' => ['foo' => 'Foo', 'baa' => 'Baa']]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(2, $errors);
+        $this->assertEquals('validation.unknown_column', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.columns.foo', $errors->get(0)->getPropertyPath());
+        $this->assertEquals('validation.unknown_column', $errors->get(1)->getMessage());
+        $this->assertEquals('settings.columns.baa', $errors->get(1)->getPropertyPath());
+
+        // Test validating invalid sort_field.
+        $view->setSettings(new ViewSettings(['sort_field' => ['foo']]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_sort_field_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.sort_field', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['sort_field' => 'foo']));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.unknown_column', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.sort_field', $errors->get(0)->getPropertyPath());
+
+        // Test validating invalid sort_asc.
+        $view->setSettings(new ViewSettings(['sort_asc' => 'yes']));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_sort_asc_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.sort_asc', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['sort_asc' => 'foo']));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_sort_asc_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.sort_asc', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['sort_asc' => ['foo']]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_sort_asc_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.sort_asc', $errors->get(0)->getPropertyPath());
+
+        // Test validating invalid filter.
+        $view->setSettings(new ViewSettings(['filter' => ['foo']]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_filter_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.filter', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['filter' => 'string']));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_filter_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.filter', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['filter' => ['AND' => ['foo']]]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_filter_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.filter', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['filter' => ['operator' => 'foo', 'field' => 'foo', 'value' => 'baa']]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_filter_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.filter', $errors->get(0)->getPropertyPath());
+
+        $view->setSettings(new ViewSettings(['filter' => ['operator' => '=', 'field' => 'f1', 'value' => 'baa', 'foo' => 'baa']]));
+        $errors = $this->container->get('validator')->validate($view);
+        $this->assertCount(1, $errors);
+        $this->assertEquals('validation.invalid_filter_definition', $errors->get(0)->getMessage());
+        $this->assertEquals('settings.filter', $errors->get(0)->getPropertyPath());
     }
 
     public function testTableViewWithValidSettings() {
@@ -102,12 +187,25 @@ class TableViewTypeTest extends DatabaseAwareTestCase
             ->setTitle('O1')
             ->setIdentifier('o1');
 
+        $field = new ContentTypeField();
+        $field->setType('text')->setIdentifier('f1')->setTitle('F1');
+        $view->getContentType()->addField($field);
+
+        $filter = ['AND' => [
+            ['OR' => [
+                ['field' => 'f1', 'operator' => 'LIKE', 'value' => 'Foo'],
+                ['field' => 'f1', 'operator' => 'LIKE', 'value' => 'Baa'],
+            ]],
+            ['field' => 'id', 'operator' => '=', 'value' => 'XXX-XXX-XXX'],
+        ]];
+
         $view->setSettings(new ViewSettings([
             'columns' => [
-                'title' => 'Title',
-                'foo' => 'baa',
+                'f1' => 'Title',
+                'id' => 'baa',
             ],
-            'sort_field' => 'foo',
+            'filter' => $filter,
+            'sort_field' => 'f1',
             'sort_asc' => true,
         ]));
 
@@ -118,12 +216,13 @@ class TableViewTypeTest extends DatabaseAwareTestCase
         $parameters = $this->container->get('united.cms.view_type_manager')->getTemplateRenderParameters($view);
         $this->assertTrue($parameters->isSelectModeNone());
         $this->assertEquals([
-            'title' => 'Title',
-            'foo' => 'baa',
+            'f1' => 'Title',
+            'id' => 'baa',
         ],$parameters->get('columns'));
         $this->assertEquals([
-            'field' => 'foo',
+            'field' => 'f1',
             'asc' => true,
         ],$parameters->get('sort'));
+        $this->assertEquals($filter, $parameters->get('filter'));
     }
 }
